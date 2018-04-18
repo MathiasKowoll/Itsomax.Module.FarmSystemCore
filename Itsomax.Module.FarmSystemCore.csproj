@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <PreserveCompilationContext>false</PreserveCompilationContext>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Itsomax.Module.Core\Itsomax.Module.Core.csproj" />
+    <ProjectReference Include="..\Itsomax.Module.UserCore\Itsomax.Module.UserCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="Microsoft.NETCore.App" Version="2.1.0-preview2-26406-04" />
+  </ItemGroup>
+
+</Project>
