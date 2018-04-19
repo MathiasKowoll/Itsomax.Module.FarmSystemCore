@@ -1,1 +1,1 @@
-# Core Module for User Management
+# Core Module for Managing Farn supplies
