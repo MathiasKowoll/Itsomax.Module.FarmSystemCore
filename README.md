@@ -1,1 +1,1 @@
-# Core Module for Managing Farn supplies
+# Core Module for Managing Farm supplies
