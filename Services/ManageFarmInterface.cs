@@ -934,6 +934,9 @@ namespace Itsomax.Module.FarmSystemCore.Services
             }
 
         }
-
+		public void ConsumptionReport()
+		{
+			
+		}      
     }
 }
