@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -434,6 +433,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             {
                 Name = "Added meal in" + costCenter.Name + " " + DateTimeOffset.Now,
                 
+                
             };
             _consumption.Add(consumptionHeader);
 
@@ -773,7 +773,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return locationList;
         }
         
-        public async void LoadInitialDataFarm()
+        public async Task<bool> LoadInitialDataFarm()
         {
             //FarmInitialData
             var rootFolder = _hostingEnvironment.WebRootPath;
@@ -927,14 +927,18 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 }
                 var error = _logger.SuccessErrorHandlingTask("Load Initial Success", "Error", "Load Initial Success", true);
                 _logger.ErrorLog(error.LoggerMessage, "Load Initial", String.Empty, String.Empty);
+				return true;
             }
             catch (Exception ex)
             {
                 var error = _logger.SuccessErrorHandlingTask("Load Initial Failed", "Error", "Load Initial Failed", false);
                 _logger.ErrorLog(error.LoggerMessage, "Load Initial", ex.InnerException.Message, String.Empty);
+				return false;
             }
 
         }
+
+		public async 
 
     }
 }

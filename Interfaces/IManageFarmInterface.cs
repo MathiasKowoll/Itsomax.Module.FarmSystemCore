@@ -45,6 +45,6 @@ namespace Itsomax.Module.FarmSystemCore.Interfaces
         IList<LocationList> GetCostCenterList();
         IEnumerable<ProductList> GetProductList(long costCenterId);
         Task<SuccessErrorHandling> SaveConsumption(long costCenterId, string[] products, string[] values,string username);
-        void LoadInitialDataFarm();
+		Task<bool> LoadInitialDataFarm();
     }
 }

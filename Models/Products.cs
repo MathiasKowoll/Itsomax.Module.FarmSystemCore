@@ -23,7 +23,7 @@ namespace Itsomax.Module.FarmSystemCore.Models
         public bool Active { get; set; }
         [Required]
         public DateTimeOffset CreatedOn { get; set; }
-        public DateTimeOffset UpdatedOn { get; }
+		public DateTimeOffset UpdatedOn { get; set; }
         [Required]
         public long BaseUnitId { get; set; }
         public BaseUnits BaseUnit { get; set; }
