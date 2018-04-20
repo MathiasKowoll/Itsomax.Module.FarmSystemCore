@@ -911,9 +911,6 @@ namespace Itsomax.Module.FarmSystemCore.Services
                                 {
                                     costCenterProductsDetails.CostCenterProductsId = _costCenterProduct.Query().FirstOrDefault(x => x.Name == "Productos para" + row.GetCell(j)).Id;
                                 }
-
-                                
-                                
                             }
                             if (headerRow.GetCell(j).ToString() == "CostCenterName") costCenterProductsDetails.CostCenterId = GetCostCenterByName(row.GetCell(j).ToString()).Id;
                             if (headerRow.GetCell(j).ToString() == "ProductCode") costCenterProductsDetails.ProductId = GetProductByCode(row.GetCell(j).ToString()).Id;
@@ -937,8 +934,6 @@ namespace Itsomax.Module.FarmSystemCore.Services
             }
 
         }
-
-		public async 
 
     }
 }
