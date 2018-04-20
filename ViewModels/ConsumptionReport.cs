@@ -1,8 +1,30 @@
 ﻿
+using System;
+
 namespace Itsomax.Module.FarmSystemCore.ViewModels
 {
     public class ConsumptionReport
     {
-		public string BaseUnit { get; set; }
+        public ConsumptionReport()
+        {
+            WarehouseOut = "07";
+            Description = "CONSUMO SILAJE";
+        }
+        public string Warehouse { get; set; }
+        public int Folio { get; set; }
+        public string GeneratedDate { get; set; }
+        public string WarehouseOut { get; set; }
+        public string Description { get; set; }
+        public string CenterCostCode { get; set; }
+        public string ProductCode { get; set; }
+        public string BaseUnit { get; set; }
+        public int Amount { get; set; }
+
+    }
+
+    public class GenerateConsumptionReportViewModel
+    {
+        public DateTime ConsumptionDate { get; set; }
+        public int Folio { get; set; }
     }
 }

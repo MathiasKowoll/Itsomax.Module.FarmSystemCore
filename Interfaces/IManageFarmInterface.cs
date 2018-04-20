@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Itsomax.Module.Core.ViewModels;
 using Itsomax.Module.FarmSystemCore.Models;
@@ -46,5 +47,6 @@ namespace Itsomax.Module.FarmSystemCore.Interfaces
         IEnumerable<ProductList> GetProductList(long costCenterId);
         Task<SuccessErrorHandling> SaveConsumption(long costCenterId, string[] products, string[] values,string username);
 		Task<bool> LoadInitialDataFarm();
+        IEnumerable<ConsumptionReport> ConsumptionReport(DateTime reportDate, int folio);
     }
 }

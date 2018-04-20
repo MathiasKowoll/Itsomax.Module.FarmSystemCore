@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using Itsomax.Module.FarmSystemCore.Models;
 using Itsomax.Module.FarmSystemCore.ViewModels;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -450,9 +452,10 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     {
                         ConsumptionId = consumptionHeader.Id,
                         CostCenterId = costCenter.Id,
+                        WarehouseCode = costCenter.WarehouseCode,
                         ProductId = getProduct.Id,
                         BaseUnit = getProduct.BaseUnit,
-                        Weight = Convert.ToDecimal(values[i])
+                        Weight = Convert.ToInt32(values[i])
                         
                     };
                     _consumptioDetails.Add(consumptionDetail);
@@ -824,6 +827,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                             if (headerRow.GetCell(j).ToString() == "Name") costCenter.Name = row.GetCell(j).ToString();
                             if (headerRow.GetCell(j).ToString() == "Code") costCenter.Code = row.GetCell(j).ToString();
                             if (headerRow.GetCell(j).ToString() == "Description") costCenter.Description = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "WarehouseCode") costCenter.WarehouseCode = row.GetCell(j).ToString();
                             if (headerRow.GetCell(j).ToString() == "Location")costCenter.LocationId = GetLocationByName(row.GetCell(j).ToString()).Id;
 
                         }
@@ -919,8 +923,6 @@ namespace Itsomax.Module.FarmSystemCore.Services
                         _costCenterProductDetail.Add(costCenterProductsDetails);
                         await _costCenterProductDetail.SaveChangesAsync();
                     }
-
-
                 }
                 var error = _logger.SuccessErrorHandlingTask("Load Initial Success", "Error", "Load Initial Success", true);
                 _logger.ErrorLog(error.LoggerMessage, "Load Initial", String.Empty, String.Empty);
@@ -934,9 +936,50 @@ namespace Itsomax.Module.FarmSystemCore.Services
             }
 
         }
-		public void ConsumptionReport()
+		public IEnumerable<ConsumptionReport> ConsumptionReport(DateTime reportDate,int folio )
 		{
-			
+		    var culture = new CultureInfo("cl-ES");
+            var report =
+		        from cd in _consumptioDetails.Query().ToList()
+		        join pr in _products.Query().ToList() on cd.ProductId equals pr.Id
+		        join cc in _costCenter.Query().ToList() on cd.CostCenterId equals cc.Id
+		        select new ConsumptionReport
+                {
+                    Warehouse = cd.WarehouseCode,
+                    Folio = folio,
+                    GeneratedDate = reportDate.ToString("d", culture),
+                    CenterCostCode = cc.Code,
+                    ProductCode = pr.Code,
+                    BaseUnit = cd.BaseUnit,
+                    Amount = cd.Weight
+
+                };
+		    var query = report
+		        .GroupBy(g => new
+		        {
+                    g.Warehouse,
+                    g.Folio,
+                    g.GeneratedDate,
+                    g.WarehouseOut,
+                    g.Description,
+                    g.CenterCostCode,
+                    g.ProductCode,
+                    g.BaseUnit
+
+		        })
+		        .Select(x => new ConsumptionReport
+                {
+                    Warehouse = x.Key.Warehouse,
+                    Folio = x.Key.Folio,
+                    GeneratedDate = x.Key.GeneratedDate,
+                    WarehouseOut = x.Key.WarehouseOut,
+                    Description = x.Key.Description,
+                    CenterCostCode = x.Key.CenterCostCode,
+                    ProductCode = x.Key.ProductCode,
+                    BaseUnit = x.Key.BaseUnit,
+		            Amount = x.Sum(o => o.Amount)
+		        });
+		    return query;
 		}      
     }
 }

@@ -19,6 +19,7 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public bool Active { get; set; }
         [Required]
         public DateTimeOffset CreatedOn { get; set; }
+        public string WarehouseCode { get; set; }
         public long LocationId { get; set; }
     }
 
@@ -47,6 +48,7 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         [Required]
         public DateTimeOffset CreatedOn { get; set; }
         public long LocationId { get; set; }
+        public string WarehouseCode { get; set; }
         public IEnumerable<SelectListItem> LocationList { get; set; }
     }
 }

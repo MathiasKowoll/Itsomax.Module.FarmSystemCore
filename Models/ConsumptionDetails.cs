@@ -18,7 +18,9 @@ namespace Itsomax.Module.FarmSystemCore.Models
         [Required]
         public string BaseUnit { get; set; }
         [Required]
-        public decimal Weight { get; set; }
+        public int Weight { get; set; }
+        [Required]
+        public string WarehouseCode { get; set; }
         
     }
 }
