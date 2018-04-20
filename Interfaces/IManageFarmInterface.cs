@@ -12,6 +12,7 @@ namespace Itsomax.Module.FarmSystemCore.Interfaces
         Task<SuccessErrorHandling> AddBaseUnit(BaseUnitViewModel model, string username);
         IEnumerable<BaseUnits> GetBaseUnitList();
         BaseUnits GetBaseUnitById(long id);
+        BaseUnits GetBaseUnitByValue(string value);
         bool EnableDisableBaseUnit(long id, string username);
         Task<SuccessErrorHandling> AddLocation(LocationViewModel model,string username);
         Task<SuccessErrorHandling> EditLocation(LocationEditViewModel model, string username);
@@ -35,6 +36,7 @@ namespace Itsomax.Module.FarmSystemCore.Interfaces
         IEnumerable<Products> GetActiveProducts();
         Products GetProductByName(string name);
         Products GetProductById(long id);
+        Products GetProductByCode(string code);
         IEnumerable<BaseUnits> GetActiveBaseUnits();
         List<BaseUnitList> GetBaseUnitList(long? productId);
         Task<SuccessErrorHandling> AddProductsToCostCenter(ProductCostCenterViewModel model, string username,params string[] selectedProducts);
@@ -43,5 +45,6 @@ namespace Itsomax.Module.FarmSystemCore.Interfaces
         IList<LocationList> GetCostCenterList();
         IEnumerable<ProductList> GetProductList(long costCenterId);
         Task<SuccessErrorHandling> SaveConsumption(long costCenterId, string[] products, string[] values,string username);
+        void LoadInitialDataFarm();
     }
 }

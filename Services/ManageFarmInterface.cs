@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Itsomax.Data.Infrastructure.Data;
@@ -10,8 +12,11 @@ using Itsomax.Module.Core.ViewModels;
 using Itsomax.Module.FarmSystemCore.Interfaces;
 using Itsomax.Module.FarmSystemCore.Models;
 using Itsomax.Module.FarmSystemCore.ViewModels;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 
 namespace Itsomax.Module.FarmSystemCore.Services
 {
@@ -26,10 +31,11 @@ namespace Itsomax.Module.FarmSystemCore.Services
         private readonly IRepository<Consumptions> _consumption;
         private readonly IRepository<ConsumptionDetails> _consumptioDetails;
         private readonly ILogginToDatabase _logger;
+        private readonly IHostingEnvironment _hostingEnvironment;
         public ManageFarmInterface(IRepository<Locations> location,ILogginToDatabase logger,IRepository<CostCenter> costCenter,
             IRepository<Products> products,IRepository<CostCenterProductsDetails> costCenterProductDetail,
             IRepository<CostCenterProducts> costCenterProduct,IRepository<BaseUnits> baseUnits,IRepository<Consumptions> consumption,
-            IRepository<ConsumptionDetails> consumptioDetails)
+            IRepository<ConsumptionDetails> consumptioDetails, IHostingEnvironment hostingEnvironment)
         {
             _location = location;
             _logger = logger;
@@ -40,6 +46,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             _baseUnits = baseUnits;
             _consumption = consumption;
             _consumptioDetails = consumptioDetails;
+            _hostingEnvironment = hostingEnvironment;
         }
 
         public async Task<SuccessErrorHandling> AddBaseUnit(BaseUnitViewModel model, string username)
@@ -78,6 +85,10 @@ namespace Itsomax.Module.FarmSystemCore.Services
         public BaseUnits GetBaseUnitById(long id)
         {
             return _baseUnits.Query().FirstOrDefault(x => x.Id == id);
+        }
+        public BaseUnits GetBaseUnitByValue(string value)
+        {
+            return _baseUnits.Query().FirstOrDefault(x => x.Value == value);
         }
 
         public async Task<SuccessErrorHandling> AddLocation(LocationViewModel model,string username)
@@ -664,6 +675,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 _location.SaveChanges();
+                var success = _logger.SuccessErrorHandlingTask("Base Unit " + baseUnit.Name + " Enable/Disable successfully", "Success", "Base Unit " + baseUnit.Name + " Enable/Disable successfully", true);
+                _logger.ErrorLog(success.LoggerMessage, "Enable/Disable Base Unit", String.Empty, username);
                 return true;
             }
             catch (SqlException ex)
@@ -717,6 +730,10 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return _products.Query().FirstOrDefault(x => x.Name == name);
         }
 
+        public Products GetProductByCode(string code)
+        {
+            return _products.Query().FirstOrDefault(x => x.Code == code);
+        }
         public Products GetProductById(long id)
         {
             return _products.Query().FirstOrDefault(x => x.Id == id);
@@ -754,34 +771,170 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
             return locationList;
         }
-        /*
-        public async Task<SucceededTask> AssignProductsToActivity(long activityLocationId,params string[] productAdd)
+
+        [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+        public async void LoadInitialDataFarm()
         {
-            var activity = GetActivityLocationName(activityLocationId);
-            foreach (var item in productAdd)
-            {
-                var product = _products.Query().FirstOrDefault(x => x.Name == item);
-                var prodAct = new ActivityProductsDetails
-                {
-                    ActivityProductsId = activityProductId,
-                    ActivityLocationDetailsId = activity.ActivityLocationId,
-                    ProductId = product.Id
-                };
-                _prodDetail.Add(prodAct);
-            }
-            
+            //FarmInitialData
+            var rootFolder = _hostingEnvironment.WebRootPath;
+            var fileName = @"FarmInitial.xlsx";
+            var path = Path.Combine(rootFolder, "FarmInitialData", fileName);
             try
             {
-                await _prodDetail.SaveChangesAsync();
-                return SucceededTask.Success;
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+                {
+                    var workbook = new XSSFWorkbook(fs);
+                    //Load Locations
+                    var sheet = workbook.GetSheetAt(workbook.GetSheetIndex("Location"));
+                    var headerRow = sheet.GetRow(0);
+                    var cellCount = headerRow.LastCellNum;
+                    for (var i = (sheet.FirstRowNum +1); i <= sheet.LastRowNum; i++)
+                    {
+                        IRow row = sheet.GetRow(i);
+                        if (row == null) continue;
+                        if (row.Cells.All(d => d.CellType == CellType.Blank)) continue;
+                        var location = new Locations();
+                        for (int j = row.FirstCellNum; j < cellCount; j++)
+                        {
+                            
+                            if (headerRow.GetCell(j).ToString() == "Name") location.Name = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Code") location.Code = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Description") location.Description = row.GetCell(j).ToString();
+                            
+                        }
+
+                        location.Active = true;
+                        location.CreatedOn = DateTimeOffset.Now;
+                        _location.Add(location);
+                        await _location.SaveChangesAsync();
+                    }
+                    //Load Cost Center
+                    sheet = workbook.GetSheetAt(workbook.GetSheetIndex("CostCenter"));
+                    headerRow = sheet.GetRow(0);
+                    cellCount = headerRow.LastCellNum;
+                    for (var i = (sheet.FirstRowNum + 1); i <= sheet.LastRowNum; i++)
+                    {
+                        IRow row = sheet.GetRow(i);
+                        if (row == null) continue;
+                        if (row.Cells.All(d => d.CellType == CellType.Blank)) continue;
+                        var costCenter = new CostCenter();
+                        for (int j = row.FirstCellNum; j < cellCount; j++)
+                        {
+
+                            if (headerRow.GetCell(j).ToString() == "Name") costCenter.Name = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Code") costCenter.Code = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Description") costCenter.Description = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Location")costCenter.LocationId = GetLocationByName(row.GetCell(j).ToString()).Id;
+
+                        }
+
+                        costCenter.Active = true;
+                        costCenter.CreatedOn = DateTimeOffset.Now;
+                        _costCenter.Add(costCenter);
+                        await _costCenter.SaveChangesAsync();
+                    }
+                    //Load Base Unit
+                    sheet = workbook.GetSheetAt(workbook.GetSheetIndex("BaseUnit"));
+                    headerRow = sheet.GetRow(0);
+                    cellCount = headerRow.LastCellNum;
+                    for (var i = (sheet.FirstRowNum + 1); i <= sheet.LastRowNum; i++)
+                    {
+                        IRow row = sheet.GetRow(i);
+                        if (row == null) continue;
+                        if (row.Cells.All(d => d.CellType == CellType.Blank)) continue;
+                        var baseUnit = new BaseUnits();
+                        for (int j = row.FirstCellNum; j < cellCount; j++)
+                        {
+
+                            if (headerRow.GetCell(j).ToString() == "Name") baseUnit.Name = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Value") baseUnit.Value = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Description") baseUnit.Description = row.GetCell(j).ToString();
+
+                        }
+
+                        baseUnit.CreatedOn = DateTimeOffset.Now;
+                        _baseUnits.Add(baseUnit);
+                        await _baseUnits.SaveChangesAsync();
+                    }
+                    //Load Product
+                    sheet = workbook.GetSheetAt(workbook.GetSheetIndex("Products"));
+                    headerRow = sheet.GetRow(0);
+                    cellCount = headerRow.LastCellNum;
+                    for (var i = (sheet.FirstRowNum + 1); i <= sheet.LastRowNum; i++)
+                    {
+                        IRow row = sheet.GetRow(i);
+                        if (row == null) continue;
+                        if (row.Cells.All(d => d.CellType == CellType.Blank)) continue;
+                        var products = new Products();
+                        for (int j = row.FirstCellNum; j < cellCount; j++)
+                        {
+
+                            if (headerRow.GetCell(j).ToString() == "Name") products.Name = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Code") products.Code = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Description") products.Description = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "BaseUnit") products.BaseUnitId = GetBaseUnitByValue(row.GetCell(j).ToString()).Id;
+
+                        }
+                        products.Active = true;
+                        products.CreatedOn = DateTimeOffset.Now;
+                        _products.Add(products);
+                        await _products.SaveChangesAsync();
+                    }
+                    //Assign Products to Cost Center
+                    sheet = workbook.GetSheetAt(workbook.GetSheetIndex("CostCenterProducts"));
+                    headerRow = sheet.GetRow(0);
+                    cellCount = headerRow.LastCellNum;
+                    for (var i = (sheet.FirstRowNum + 1); i <= sheet.LastRowNum; i++)
+                    {
+                        IRow row = sheet.GetRow(i);
+                        if (row == null) continue;
+                        if (row.Cells.All(d => d.CellType == CellType.Blank)) continue;
+                        var costCenterProductsDetails = new CostCenterProductsDetails();
+                        for (int j = row.FirstCellNum; j < cellCount; j++)
+                        {
+
+                            if (headerRow.GetCell(j).ToString() == "CostCenterName")
+                            {
+                                if (_costCenterProduct.Query().FirstOrDefault(x => x.Name == "Productos para" + row.GetCell(j)) == null)
+                                {
+                                    var costCenterProducts = new CostCenterProducts()
+                                    {
+                                        Name = "Productos para" + row.GetCell(j),
+                                        Active = true,
+                                        CreatedOn = DateTimeOffset.Now
+                                    };
+                                    _costCenterProduct.Add(costCenterProducts);
+                                    await _costCenterProduct.SaveChangesAsync();
+                                    costCenterProductsDetails.CostCenterProductsId = costCenterProducts.Id;
+                                }
+                                else
+                                {
+                                    costCenterProductsDetails.CostCenterProductsId = _costCenterProduct.Query().FirstOrDefault(x => x.Name == "Productos para" + row.GetCell(j)).Id;
+                                }
+
+                                
+                                
+                            }
+                            if (headerRow.GetCell(j).ToString() == "CostCenterName") costCenterProductsDetails.CostCenterId = GetCostCenterByName(row.GetCell(j).ToString()).Id;
+                            if (headerRow.GetCell(j).ToString() == "ProductCode") costCenterProductsDetails.ProductId = GetProductByCode(row.GetCell(j).ToString()).Id;
+
+                        }
+                        _costCenterProductDetail.Add(costCenterProductsDetails);
+                        await _costCenterProductDetail.SaveChangesAsync();
+                    }
+
+
+                }
+                var error = _logger.SuccessErrorHandlingTask("Load Initial Success", "Error", "Load Initial Success", true);
+                _logger.ErrorLog(error.LoggerMessage, "Load Initial", String.Empty, String.Empty);
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                _logger.ErrorLog("Could not add Products to activity "+activity.Name ,"Add products to activity",ex.InnerException.Message);
-                return SucceededTask.Failed("");
+                var error = _logger.SuccessErrorHandlingTask("Load Initial Failed", "Error", "Load Initial Failed", false);
+                _logger.ErrorLog(error.LoggerMessage, "Load Initial", ex.InnerException.Message, String.Empty);
             }
+
         }
-        */
-        
+
     }
 }

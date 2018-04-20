@@ -29,10 +29,6 @@ namespace Itsomax.Module.FarmSystemCore.Data
                 o.ToTable("CostCenterProductsDetails", "FarmCore");
 
             });
-            modelBuilder.Entity<Consumptions>(o =>
-            {
-                o.HasOne(x => x.ConsumptionTypes).WithMany(x => x.Consumptions).HasForeignKey(x => x.ConsumptionTypeId);
-            });
             modelBuilder.Entity<CostCenter>(o =>
             {
                 o.HasOne(x => x.Locations).WithMany(x => x.CostCenter).HasForeignKey(x => x.LocationId);
