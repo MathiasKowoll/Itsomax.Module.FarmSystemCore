@@ -432,7 +432,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             var costCenter = GetCostCenterById(costCenterId);
             var consumptionHeader = new Consumptions
             {
-                Name = "Added meal in" + costCenter.Name + " " + DateTimeOffset.Now
+                Name = "Added meal in" + costCenter.Name + " " + DateTimeOffset.Now,
+                
             };
             _consumption.Add(consumptionHeader);
 
@@ -771,8 +772,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
             return locationList;
         }
-
-        [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+        
         public async void LoadInitialDataFarm()
         {
             //FarmInitialData
