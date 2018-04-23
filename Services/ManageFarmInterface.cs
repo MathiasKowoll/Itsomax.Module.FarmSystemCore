@@ -433,7 +433,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             var costCenter = GetCostCenterById(costCenterId);
             var consumptionHeader = new Consumptions
             {
-                Name = "Added meal in" + costCenter.Name + " " + DateTimeOffset.Now,
+				Name = "Added meal in " + costCenter.Name + " " + DateTimeOffset.Now,
                 
                 
             };
@@ -939,10 +939,12 @@ namespace Itsomax.Module.FarmSystemCore.Services
 		public IEnumerable<ConsumptionReport> ConsumptionReport(DateTime reportDate,int folio )
 		{
 		    var culture = new CultureInfo("cl-ES");
-            var report =
+            var query =
 		        from cd in _consumptioDetails.Query().ToList()
 		        join pr in _products.Query().ToList() on cd.ProductId equals pr.Id
 		        join cc in _costCenter.Query().ToList() on cd.CostCenterId equals cc.Id
+				join cp in _consumption.Query().ToList() on cd.ConsumptionId equals cp.Id
+                where cp.CreatedOn.ToString("yyyyMMdd") == reportDate.ToString("yyyyMMdd")
 		        select new ConsumptionReport
                 {
                     Warehouse = cd.WarehouseCode,
@@ -954,7 +956,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     Amount = cd.Weight
 
                 };
-		    var query = report
+		    var report = query
 		        .GroupBy(g => new
 		        {
                     g.Warehouse,
@@ -979,7 +981,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     BaseUnit = x.Key.BaseUnit,
 		            Amount = x.Sum(o => o.Amount)
 		        });
-		    return query;
+			return report;
 		}      
     }
 }
