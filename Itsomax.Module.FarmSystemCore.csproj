@@ -16,4 +16,7 @@
     <PackageReference Update="Microsoft.NETCore.App" Version="2.1.0-preview2-26406-04" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="ViewModels\GenerateConsumptionReportViewModel.cs" />
+  </ItemGroup>
 </Project>
