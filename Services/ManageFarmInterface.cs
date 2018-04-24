@@ -14,7 +14,6 @@ using Itsomax.Module.FarmSystemCore.Models;
 using Itsomax.Module.FarmSystemCore.ViewModels;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -434,6 +433,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             var consumptionHeader = new Consumptions
             {
 				Name = "Added meal in " + costCenter.Name + " " + DateTimeOffset.Now,
+                LateCreatedOn = DateTimeOffset.Now,
                 
                 
             };
@@ -442,7 +442,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _consumption.SaveChangesAsync();
-                for (int i = 0; i < count;  i++)
+                for (var i = 0; i < count;  i++)
                 {
                     var getProduct = await (from a in _products.Query()
                         join b in _baseUnits.Query() on a.BaseUnitId equals b.Id
@@ -944,7 +944,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
 		        join pr in _products.Query().ToList() on cd.ProductId equals pr.Id
 		        join cc in _costCenter.Query().ToList() on cd.CostCenterId equals cc.Id
 				join cp in _consumption.Query().ToList() on cd.ConsumptionId equals cp.Id
-                where cp.CreatedOn.ToString("yyyyMMdd") == reportDate.ToString("yyyyMMdd")
+                where cp.LateCreatedOn.ToString("yyyyMMdd") == reportDate.ToString("yyyyMMdd")
 		        select new ConsumptionReport
                 {
                     Warehouse = cd.WarehouseCode,
