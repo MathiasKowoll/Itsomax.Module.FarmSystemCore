@@ -17,8 +17,14 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public string Description { get; set; }
         [Required]
         public bool Active { get; set; }
-        [Required]
+        [Required]      
         public DateTimeOffset CreatedOn { get; set; }
+		[Required]
+        public bool IsMeal { get; set; }
+        [Required]
+        public bool IsMedical { get; set; }
+        [Required]
+        public bool IsFarming { get; set; }
         public string WarehouseCode { get; set; }
         public long LocationId { get; set; }
     }
@@ -45,7 +51,12 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public string Description { get; set; }
         [Required]
         public bool Active { get; set; }
+		[Required]
+        public bool IsMeal { get; set; }
         [Required]
+        public bool IsMedical { get; set; }
+        [Required]
+        public bool IsFarming { get; set; }
         public DateTimeOffset CreatedOn { get; set; }
         public long LocationId { get; set; }
         public string WarehouseCode { get; set; }

@@ -25,7 +25,14 @@ namespace Itsomax.Module.FarmSystemCore.Models
         public DateTimeOffset CreatedOn { get; set; }
         [Required]
         public DateTimeOffset UpdatedOn { get; set; }
+		[Required]
         public string WarehouseCode { get; set; }
+		[Required]
+		public bool IsMeal { get; set; }
+		[Required]
+		public bool IsMedical { get; set; }
+		[Required]
+		public bool IsFarming { get; set; }
         public long LocationId { get; set; }
         public Locations Locations { get; set; }
         public IList<ConsumptionDetails> ConsumptionDetails { get; set; } = new List<ConsumptionDetails>();

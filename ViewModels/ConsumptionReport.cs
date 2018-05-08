@@ -22,9 +22,16 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
 
     }
 
+    public class WarehouseList
+    {
+        public string WarehouseName { get; set; }
+        public bool Selected { get; set; }
+    }
+
     public class GenerateConsumptionReportViewModel
     {
         public DateTime ConsumptionDate { get; set; }
         public int Folio { get; set; }
+        public string WarehouseName { get; set; }
     }
 }

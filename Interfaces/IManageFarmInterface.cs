@@ -43,10 +43,13 @@ namespace Itsomax.Module.FarmSystemCore.Interfaces
         Task<SuccessErrorHandling> AddProductsToCostCenter(ProductCostCenterViewModel model, string username,params string[] selectedProducts);
         IEnumerable<SelectListItem> GetSelectListProducts(long centerCostId);
         string GetCostCenterProductName(long costCenterId);
+        bool GetCostCenterProductActive(long costCenterId);
         IList<LocationList> GetCostCenterList();
+        IList<LocationList> GetCostCenterMealList();
         IEnumerable<ProductList> GetProductList(long costCenterId);
         Task<SuccessErrorHandling> SaveConsumption(long costCenterId, string[] products, string[] values,string username);
 		Task<bool> LoadInitialDataFarm();
-        IEnumerable<ConsumptionReport> ConsumptionReport(DateTime reportDate, int folio);
+        IList<WarehouseList> GetWarehouseListNames();
+        IEnumerable<ConsumptionReport> ConsumptionReport(DateTime reportDate, int folio,string warehouseName);
     }
 }
