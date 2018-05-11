@@ -11,6 +11,8 @@ namespace Itsomax.Module.FarmSystemCore.Data
             modelBuilder.Entity<Products>(o =>
             {
                 o.HasOne(ur => ur.BaseUnit).WithMany(x => x.Product).HasForeignKey(x => x.BaseUnitId);
+                o.HasOne(ur => ur.ProductTypes).WithMany(x => x.Product).HasForeignKey(x => x.ProductTypeId).IsRequired(false)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
             modelBuilder.Entity<ConsumptionDetails>(o =>
             {

@@ -810,6 +810,21 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return locationList;
         }
         
+        public IList<LocationList> GetCostCenterMedicallList()
+        {
+            var locationList = new List<LocationList>();   
+            var locList = (from a in GetActiveCostCenters()
+                where a.IsMedical == true
+                select new { LocationId = a.Id, LocationName = a.Name,Selected = false }).ToList();
+            locationList.Add( new LocationList {LocationId = 0, LocationName = "Select a Cost Center",Selected = true});
+            foreach (var item in locList)
+            {
+                locationList.Add( new LocationList {LocationId = item.LocationId,LocationName = item.LocationName,Selected = false});
+            }
+
+            return locationList;
+        }
+        
         
         public async Task<bool> LoadInitialDataFarm()
         {

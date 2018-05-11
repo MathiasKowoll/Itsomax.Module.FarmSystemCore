@@ -27,6 +27,8 @@ namespace Itsomax.Module.FarmSystemCore.Models
         [Required]
         public long BaseUnitId { get; set; }
         public BaseUnits BaseUnit { get; set; }
+        public long? ProductTypeId { get; set; }
+        public ProductTypes ProductTypes { get; set; }
         public IList<ConsumptionDetails> ConsumptionDetails { get; set; } = new List<ConsumptionDetails>();
         public IList<CostCenterProductsDetails> CostCenterProductsDetails  { get; set; } = new List<CostCenterProductsDetails>();
 
