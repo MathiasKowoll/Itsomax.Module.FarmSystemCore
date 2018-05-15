@@ -1005,7 +1005,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 {
                     Warehouse = cd.WarehouseCode,
                     Folio = folio,
-                    GeneratedDate = reportDate.ToString("dd-MM-yyyy"),
+                    GeneratedDate = reportDate.ToString("dd/MM/yyyy"),
                     CenterCostCode = cc.Code,
                     ProductCode = pr.Code,
                     BaseUnit = cd.BaseUnit,
