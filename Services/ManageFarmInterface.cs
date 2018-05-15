@@ -993,7 +993,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
         }
 		public IEnumerable<ConsumptionReport> ConsumptionReport(DateTime reportDate,int folio,string warehouseName )
 		{
-		    var culture = new CultureInfo("cl-ES");
+            //var testDate = reportDate.ToString("yyyyMMdd");
+            //var culture = new CultureInfo("cl-ES");
             var query =
 		        from cd in _consumptioDetails.Query().ToList()
 		        join pr in _products.Query().ToList() on cd.ProductId equals pr.Id
@@ -1004,7 +1005,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 {
                     Warehouse = cd.WarehouseCode,
                     Folio = folio,
-                    GeneratedDate = reportDate.ToString("d", culture),
+                    GeneratedDate = reportDate.ToString("dd-MM-yyyy"),
                     CenterCostCode = cc.Code,
                     ProductCode = pr.Code,
                     BaseUnit = cd.BaseUnit,
