@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -32,6 +31,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
         private readonly IRepository<ConsumptionDetails> _consumptioDetails;
         private readonly ILogginToDatabase _logger;
         private readonly IHostingEnvironment _hostingEnvironment;
+        
         public ManageFarmInterface(IRepository<Locations> location,ILogginToDatabase logger,IRepository<CostCenter> costCenter,
             IRepository<Products> products,IRepository<CostCenterProductsDetails> costCenterProductDetail,
             IRepository<CostCenterProducts> costCenterProduct,IRepository<BaseUnits> baseUnits,IRepository<Consumptions> consumption,
@@ -407,9 +407,9 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
         public string GetCostCenterProductName(long costCenterId)
         {
-            var name = (from cc in _costCenter.Query().ToList()
-                join pd in _costCenterProductDetail.Query().ToList() on cc.Id equals pd.CostCenterId
-                join ccname in _costCenterProduct.Query().ToList() on pd.CostCenterProductsId equals ccname.Id
+            var name = (from cc in _costCenter.Query()
+                join pd in _costCenterProductDetail.Query() on cc.Id equals pd.CostCenterId
+                join ccname in _costCenterProduct.Query() on pd.CostCenterProductsId equals ccname.Id
                 where cc.Id == costCenterId
                 select(ccname.Name)).FirstOrDefault();
             return name;
@@ -417,9 +417,9 @@ namespace Itsomax.Module.FarmSystemCore.Services
         
         public bool GetCostCenterProductActive(long costCenterId)
         {
-            var active = (from cc in _costCenter.Query().ToList()
-                join pd in _costCenterProductDetail.Query().ToList() on cc.Id equals pd.CostCenterId
-                join ccname in _costCenterProduct.Query().ToList() on pd.CostCenterProductsId equals ccname.Id
+            var active = (from cc in _costCenter.Query()
+                join pd in _costCenterProductDetail.Query() on cc.Id equals pd.CostCenterId
+                join ccname in _costCenterProduct.Query() on pd.CostCenterProductsId equals ccname.Id
                 where cc.Id == costCenterId
                 select(ccname.Active)).FirstOrDefault();
             return active;
@@ -445,14 +445,14 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return products.ToList();
         }
 
-        public async Task<SuccessErrorHandling> SaveConsumption(long costCenterId, string[] products, string[] values,string username)
+        public async Task<SuccessErrorHandling> SaveConsumption(long costCenterId, string[] products, string[] values,string username,DateTimeOffset? lateCreatedOn)
         {
             var count = products.Length;
             var costCenter = GetCostCenterById(costCenterId);
             var consumptionHeader = new Consumptions
             {
 				Name = "Added meal in " + costCenter.Name + " " + DateTimeOffset.Now,
-                LateCreatedOn = DateTimeOffset.Now,
+                LateCreatedOn = lateCreatedOn ?? DateTimeOffset.Now
                 
                 
             };
@@ -503,6 +503,69 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 return error;
             }
         }
+
+        public async Task<SuccessErrorHandling> SaveConsumptionEdit(long consumptionId, string[] products, string[] values,string username)
+        {
+            var count = products.Length;
+            var consumptionHeader = _consumption.Query().FirstOrDefault(x => x.Id == consumptionId);
+            var oldConsumptionDetail = _consumptioDetails.Query().Where(x => x.ConsumptionId == consumptionId).ToList();
+            var oldConsumptionDate = consumptionHeader.CreatedOn;
+            consumptionHeader.CreatedOn = DateTimeOffset.Now;
+
+            foreach (var item in oldConsumptionDetail)
+            {
+                _consumptioDetails.Remove(_consumptioDetails.Query().FirstOrDefault(x => x.Id == item.Id));
+            }
+
+            
+            try
+            {
+                await _consumption.SaveChangesAsync();
+                await _consumptioDetails.SaveChangesAsync();
+                try
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var getProduct = await (from a in _products.Query()
+                            join b in _baseUnits.Query() on a.BaseUnitId equals b.Id
+                            where a.Name == products[i]
+                            select new {a.Id, a.Name, BaseUnit = b.Value}).FirstOrDefaultAsync();
+                        var consumptionDetail = new ConsumptionDetails
+                        {
+                            ConsumptionId = consumptionHeader.Id,
+                            CostCenterId = oldConsumptionDetail.FirstOrDefault().CostCenterId,
+                            WarehouseCode = oldConsumptionDetail.FirstOrDefault().WarehouseCode,
+                            ProductId = getProduct.Id,
+                            BaseUnit = getProduct.BaseUnit,
+                            Weight = Convert.ToInt32(values[i])
+                        
+                        };
+                        _consumptioDetails.Add(consumptionDetail);
+                    }
+
+                    await _consumptioDetails.SaveChangesAsync();
+                    var success = _logger.SuccessErrorHandlingTask("Consumption " + consumptionHeader.Name + " : updated successfully","Success","Consumption " + consumptionHeader.Name + " : updated successfully",true);
+                    _logger.InformationLog(success.LoggerMessage,"Create Consumption",String.Empty,username);
+                    return success;
+                }
+                catch (SqlException ex)
+                {
+                    var consumptionReverse = _consumption.Query().FirstOrDefault(x => x.Id == consumptionId);
+                    consumptionReverse.CreatedOn = oldConsumptionDate;
+                    await _consumption.SaveChangesAsync();
+                    var error = _logger.SuccessErrorHandlingTask("Consumption " + consumptionHeader.Name + " updated unsuccessfully","Error","Consumption " + consumptionHeader.Name + " updated unsuccessfully",false);
+                    _logger.InformationLog(error.LoggerMessage,"Create Consumption",ex.InnerException.Message,username);
+                    return error;
+                }
+                
+            }
+            catch (SqlException ex)
+            {
+                var error = _logger.SuccessErrorHandlingTask("Consumption " + consumptionHeader.Name + " updated unsuccessfully","Error","Consumption " + consumptionHeader.Name + " updated unsuccessfully",false);
+                _logger.InformationLog(error.LoggerMessage,"Create Consumption",ex.InnerException.Message,username);
+                return error;
+            }
+        }
         
 
         public IEnumerable<CostCenter> GetCostCenters()
@@ -524,28 +587,6 @@ namespace Itsomax.Module.FarmSystemCore.Services
         {
             return _costCenter.Query().FirstOrDefault(x => x.Id == id);
         }
-
-        //TODO: Save for future use
-        /*
-        public IEnumerable<ActivityProductViewModel> GetActivityLocationNameAll()
-        {
-            try
-            {
-                var activityName =
-                    (from ccd in _costCenterDetails.Query()
-                        join cc in _centerCost.Query() on ccd.ActivityId equals cc.Id
-                        join l in _location.Query() on ccd.LocationId equals l.Id
-                        select new ActivityProductViewModel{ActivityLocationId = ccd.Id,ActivityId = cc.Id,Name = l.Name + " - " + cc.Name});
-                return activityName;
-            }
-            catch (SqlException ex)
-            {
-                _logger.ErrorLog("Could not get activity location name" ,"GetActivityLocationName",ex.InnerException.Message);
-                return null;
-            }
-           
-        }
-        */
 
         public IEnumerable<BaseUnits> GetActiveBaseUnits()
         {
@@ -606,14 +647,14 @@ namespace Itsomax.Module.FarmSystemCore.Services
             {
                 await _products.SaveChangesAsync();
                 var success = _logger.SuccessErrorHandlingTask("Product " + model.Name + " created successfully","Success","Product " + model.Name + " created successfully",true);
-                _logger.InformationLog(success.LoggerMessage,"Create Location",String.Empty);
+                _logger.InformationLog(success.LoggerMessage,"Create Product",String.Empty);
                 return success;
 
             }
             catch (Exception ex)
             {
                 var error = _logger.SuccessErrorHandlingTask("Product " + model.Name + " created unsuccessfully","Error","Product " + model.Name + " created unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Create Location",ex.InnerException.Message);
+                _logger.ErrorLog(error.LoggerMessage,"Create Product",ex.InnerException.Message);
                 return error;
             }
         }
@@ -637,7 +678,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             {
                 await _products.SaveChangesAsync();
                 var success = _logger.SuccessErrorHandlingTask("Product " + model.Name + " updated successfully","Success","Product " + model.Name + " updated successfully",true);
-                _logger.InformationLog(success.LoggerMessage,"Edit Cost Center",String.Empty,username);
+                _logger.InformationLog(success.LoggerMessage,"Edit Product",String.Empty,username);
                 return success;
             }
             catch (SqlException ex)
@@ -764,22 +805,40 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
         public IEnumerable<ProductList> GetProductList(long costCenterId)
         {
-            var list = from cc in _costCenter.Query().ToList()
-                join pd in _costCenterProductDetail.Query().ToList() on cc.Id equals pd.CostCenterId
-                join pr in _products.Query().ToList() on pd.ProductId equals pr.Id
-                join ccname in _costCenterProduct.Query().ToList() on pd.CostCenterProductsId equals ccname.Id
-                join bu in _baseUnits.Query().ToList() on pr.BaseUnitId equals bu.Id
+            var list = from cc in _costCenter.Query()
+                join pd in _costCenterProductDetail.Query() on cc.Id equals pd.CostCenterId
+                join pr in _products.Query() on pd.ProductId equals pr.Id
+                join ccname in _costCenterProduct.Query() on pd.CostCenterProductsId equals ccname.Id
+                join bu in _baseUnits.Query() on pr.BaseUnitId equals bu.Id
                 where cc.Id == costCenterId && cc.Active == true && pr.Active == true
-                select (new ProductList
+                select new ProductList
                 {
                     Name = pr.Name,
                     BaseUnit = bu.Value,
                     Value = String.Empty,
                     CenterCostName = cc.Name
-                });
+                };
 
             return list.ToList();
         }
+
+        public IEnumerable<ProductListEdit> GetProductListEdit(long consumptionId)
+        {
+            var list = from cd in _consumptioDetails.Query().Where(x => x.ConsumptionId == consumptionId)
+                join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
+                join p in _products.Query() on cd.ProductId equals p.Id
+                select new ProductListEdit
+                {
+                    CostCenterId = cc.Id,
+                    CenterCostName = cc.Name,
+                    Name = p.Name,
+                    Value = cd.Weight,
+                    BaseUnit = cd.BaseUnit
+
+                };
+            return list.ToList();
+        }
+        
 
         public IList<LocationList> GetCostCenterList()
         {
@@ -996,10 +1055,10 @@ namespace Itsomax.Module.FarmSystemCore.Services
             //var testDate = reportDate.ToString("yyyyMMdd");
             //var culture = new CultureInfo("cl-ES");
             var query =
-		        from cd in _consumptioDetails.Query().ToList()
-		        join pr in _products.Query().ToList() on cd.ProductId equals pr.Id
-		        join cc in _costCenter.Query().ToList() on cd.CostCenterId equals cc.Id
-				join cp in _consumption.Query().ToList() on cd.ConsumptionId equals cp.Id
+		        from cd in _consumptioDetails.Query()
+		        join pr in _products.Query() on cd.ProductId equals pr.Id
+		        join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
+				join cp in _consumption.Query() on cd.ConsumptionId equals cp.Id
                 where cp.LateCreatedOn.ToString("yyyyMMdd") == reportDate.ToString("yyyyMMdd") && cc.WarehouseCode == warehouseName
 		        select new ConsumptionReport
                 {
@@ -1043,7 +1102,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
         public IList<WarehouseList> GetWarehouseListNames()
         {
             var warehouseList = new List<WarehouseList>();
-            var warehouseNames = from cc in _costCenter.Query().ToList()
+            var warehouseNames = from cc in _costCenter.Query()
                 select new { WarehouseName = cc.WarehouseCode,Selected = false };
             var report = warehouseNames.GroupBy(o => o.WarehouseName).Select(x => x.First()).ToList();
             warehouseList.Add(new WarehouseList {WarehouseName = "Select a Warehouse",Selected = true});
@@ -1055,5 +1114,55 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return warehouseList;
 
         }
+
+        public IList<ConsumptionList> GetConsumptionList()
+        {
+            var date = DateTimeOffset.Now;   
+                
+            var query = from c in _consumption.Query().Where(x => x.CreatedOn >= date.AddDays(-1))
+                join cd in _consumptioDetails.Query() on c.Id equals cd.ConsumptionId
+                join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
+                select new ConsumptionList
+                {
+                    Id = c.Id,
+                    CenterCost = cc.Name,
+                    ConsumptionEfectiveEntryDate = c.LateCreatedOn.ToLocalTime().ToString("yyyy/MM/dd HH:mm:ss"),
+                    ConsumptionEntryDate = c.CreatedOn.ToLocalTime().ToString("yyyy/MM/dd HH:mm:ss "),
+                    ConsumptionName = c.Name,
+                    Warehouse = cd.WarehouseCode
+                };
+            var list = query
+                .GroupBy(g => new
+                {
+                    g.Id,
+                    g.CenterCost,
+                    g.ConsumptionEfectiveEntryDate,
+                    g.ConsumptionEntryDate,
+                    g.ConsumptionName,
+                    g.Warehouse
+                })
+                .Select(x => new ConsumptionList
+                {
+                    Id = x.Key.Id,
+                    CenterCost = x.Key.CenterCost,
+                    ConsumptionEfectiveEntryDate = x.Key.ConsumptionEfectiveEntryDate,
+                    ConsumptionEntryDate = x.Key.ConsumptionEntryDate,
+                    ConsumptionName = x.Key.ConsumptionName,
+                    Warehouse = x.Key.Warehouse
+                }).ToList();
+
+            return list;
+        }
+
+        public Consumptions GetConsumptionById(long id)
+        {
+            return _consumption.Query().FirstOrDefault(x => x.Id == id);
+        }
+
+        public IList<ConsumptionDetails> ConsumptionDetailsByConsumptionId(long id)
+        {
+            return _consumptioDetails.Query().Where(x => x.ConsumptionId == id).ToList();
+        }
+        
     }
 }
