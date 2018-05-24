@@ -305,6 +305,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             costCenter.IsFarming = model.IsFarming;
             costCenter.IsMeal = model.IsMeal;
             costCenter.IsMedical = model.IsMedical;
+            costCenter.WarehouseCode = model.WarehouseCode;
             try
             {
                 await _costCenter.SaveChangesAsync();
