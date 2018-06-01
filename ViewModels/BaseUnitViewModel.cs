@@ -16,4 +16,21 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         [Required]
         public  bool Active { get; set; }
     }
+
+    public class BaseUnitEditViewModel
+    {
+        [Required]
+        public long Id { get; set; }
+        [Required]
+        [MaxLength (200)]
+        public string Name { get; set; }
+        [Required]
+        [MaxLength (20)]
+        public string Value { get; set; }
+        [Required]
+        [MaxLength (200)]
+        public string Description { get; set; }
+        [Required]
+        public  bool Active { get; set; }
+    }
 }

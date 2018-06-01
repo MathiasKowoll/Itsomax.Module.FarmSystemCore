@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Itsomax.Data.Infrastructure.Data;
 using Itsomax.Module.Core.Extensions;
 using Itsomax.Module.Core.Interfaces;
-using Itsomax.Module.Core.ViewModels;
 using Itsomax.Module.FarmSystemCore.Interfaces;
 using Itsomax.Module.FarmSystemCore.Models;
 using Itsomax.Module.FarmSystemCore.ViewModels;
@@ -49,7 +48,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             _hostingEnvironment = hostingEnvironment;
         }
 
-        public async Task<SuccessErrorHandling> AddBaseUnit(BaseUnitViewModel model, string username)
+        public async Task<SystemSucceededTask> AddBaseUnit(BaseUnitViewModel model, string username)
         {
             var baseUnit = new BaseUnits
             {
@@ -63,19 +62,48 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _baseUnits.SaveChangesAsync();
-                var success = _logger.SuccessErrorHandlingTask("Base unit " + model.Name + " created successfully",
-                    "Success", "Base unit " + model.Name + " created successfully", true);
-                _logger.ErrorLog(success.LoggerMessage, "Create Base Unit", String.Empty, username);
-                return success;
+                _logger.InformationLog("Base unit " + model.Name + " created successfully", "Create Base Unit", String.Empty, username);
+                return SystemSucceededTask.Success("Base unit " + model.Name + " created successfully");
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Base unit " + model.Name + " created unsuccessfully",
-                    "Error", "Base unit " + model.Name + " created unsuccessfully", false);
-                _logger.ErrorLog(error.LoggerMessage, "Create Base Unit", ex.InnerException.Message, username);
-                return error;
+                _logger.ErrorLog(ex.Message, "Create Base Unit", ex.InnerException.Message, username);
+                return SystemSucceededTask.Failed("Base unit " + model.Name + " created successfully",
+                    ex.InnerException.Message, true, false);
+            }
+            
+        }
+
+        public async Task<SystemSucceededTask> EditBaseUnit(BaseUnitEditViewModel model, string userName)
+        {
+            var oldBaseUnit = _baseUnits.GetById(model.Id);
+            if (oldBaseUnit == null)
+            {
+                _logger.ErrorLog("Base Unit not found","Base Unit Edit",string.Empty,userName);
+                return SystemSucceededTask.Failed("Base Unit not found", string.Empty, false, true);
+            }
+            
+            oldBaseUnit.Active = model.Active;
+            oldBaseUnit.Name = model.Name;
+            oldBaseUnit.Description = model.Description;
+            oldBaseUnit.Value = model.Value;
+            oldBaseUnit.UpdatedOn = DateTimeOffset.Now;
+
+            try
+            {
+                await _baseUnits.SaveChangesAsync();
+                _logger.InformationLog("Base Unit " + model.Name + " edited successfully", "Base Unit Edit",
+                    string.Empty, userName);
+                return SystemSucceededTask.Success("Base Unit " + model.Name + " edited successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorLog(ex.Message, "Base Unit Edit",ex.InnerException.Message, userName);
+                return SystemSucceededTask.Failed("Base Unit " + model.Name + " edited unsuccessful",
+                    ex.InnerException.Message, true, false);
             }
         }
+
 
         public IEnumerable<BaseUnits> GetBaseUnitList()
         {
@@ -91,13 +119,12 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return _baseUnits.Query().FirstOrDefault(x => x.Value == value);
         }
 
-        public async Task<SuccessErrorHandling> AddLocation(LocationViewModel model,string username)
+        public async Task<SystemSucceededTask> AddLocation(LocationViewModel model,string username)
         {
             if (!ValidateLocationCode(model.Code))
             {
-                var error = _logger.SuccessErrorHandlingTask("Location " + model.Name + " code already exists","Error","Location " + model.Name + " code already exists",false);
-                _logger.ErrorLog(error.LoggerMessage,"Create Location","Code for location already exists",username);
-                return error;
+                _logger.ErrorLog("Code for location already exists","Create Location",string.Empty,username);
+                return SystemSucceededTask.Failed("Location " + model.Name + " code already exists",string.Empty,false,true);
             }
 
             var location = new Locations()
@@ -114,25 +141,23 @@ namespace Itsomax.Module.FarmSystemCore.Services
             {
                 
                 await _location.SaveChangesAsync();
-                var success = _logger.SuccessErrorHandlingTask("Location " + model.Name + " created successfully","Success","Location " + model.Name + " created successfully",true);
-                _logger.ErrorLog(success.LoggerMessage,"Create Location",String.Empty,username);
-                return success;
+                _logger.InformationLog("Location " + model.Name + " created successfully","Create Location",string.Empty,username);
+                return SystemSucceededTask.Success("Location " + model.Name + " created successfully");
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Location " + model.Name + " created unsuccessfully","Error","Location " + model.Name + " created unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Create Location",ex.InnerException.Message,username);
-                return error;
+                _logger.ErrorLog(ex.Message,"Create Location",ex.InnerException.Message,username);
+                return SystemSucceededTask.Failed("Location " + model.Name + " created unsuccessfully",
+                    ex.InnerException.Message, true, false);
             }
         }
 
-        public async Task<SuccessErrorHandling> EditLocation(LocationEditViewModel model, string username)
+        public async Task<SystemSucceededTask> EditLocation(LocationEditViewModel model, string username)
         {
             if (model == null)
             {
-                var error = _logger.SuccessErrorHandlingTask("Location not found","Error","Location  not found",false);
-                _logger.ErrorLog(error.LoggerMessage,"Edit Location ","Location not found",username);
-                return error;
+                _logger.ErrorLog("Location not found","Edit Location ",string.Empty,username);
+                return SystemSucceededTask.Failed("Location not found",string.Empty, false, true);
             }
 
             var location = await _location.Query().FirstOrDefaultAsync(x => x.Id == model.Id);
@@ -144,15 +169,15 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _location.SaveChangesAsync();
-                var success = _logger.SuccessErrorHandlingTask("Location " + model.Name + " updated successfully","Success","Location " + model.Name + " updated successfully",true);
-                _logger.ErrorLog(success.LoggerMessage,"Update Location",String.Empty,username);
-                return success;
+                _logger.InformationLog("Location " + model.Name + " updated successfully", "Update Location",
+                    string.Empty, username);
+                return SystemSucceededTask.Success("Location " + model.Name + " updated successfully");
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Location " + model.Name + " updated unsuccessfully","Error","Location " + model.Name + " updated unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Update Location",ex.InnerException.Message,username);
-                return error;
+                _logger.ErrorLog(ex.Message,"Update Location",ex.InnerException.Message,username);
+                return SystemSucceededTask.Failed("Location " + model.Name + " updated unsuccessful",
+                    ex.InnerException.Message, true, false);
             }
         }
         
@@ -177,12 +202,13 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 _location.SaveChanges();
+                _logger.InformationLog("Location " + locations.Name + " Enable/Disable successfully",
+                    "Enable/Disable Location", string.Empty, username);
                 return true;
             }
             catch (SqlException ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Location " + locations.Name + " Enable/Disable unsuccessfully","Error","Location " + locations.Name + " Enable/Disable unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Enable/Disable Location",ex.InnerException.Message,username);
+                _logger.ErrorLog(ex.Message,"Enable/Disable Location",ex.InnerException.Message,username);
                 return false;
             }
         }
@@ -246,13 +272,12 @@ namespace Itsomax.Module.FarmSystemCore.Services
         }        
         
 
-        public async Task<SuccessErrorHandling> AddCostCenter(CostCenterViewModel model,string username)
+        public async Task<SystemSucceededTask> AddCostCenter(CostCenterViewModel model,string username)
         {
             if (!ValidateCostCenterCode(model.Code))
             {
-                var error = _logger.SuccessErrorHandlingTask("Cost center " + model.Name + " code already exists","Error","Cost Center " + model.Name + " code already exists",false);
-                _logger.ErrorLog(error.LoggerMessage,"Create Cost Center","Code for cost center already exists",username);
-                return error;
+                _logger.ErrorLog("Cost center " + model.Name + " code already exists","Create Cost Center","Code for cost center already exists",username);
+                return SystemSucceededTask.Failed("Cost center " + model.Name + " code already exists",string.Empty,false,true);
             }
 
             var centerCost = new CostCenter()
@@ -274,26 +299,22 @@ namespace Itsomax.Module.FarmSystemCore.Services
             {
                 
                 await _costCenter.SaveChangesAsync();
-                var success = _logger.SuccessErrorHandlingTask("Cost Center " + model.Name + " created successfully","Success","Cost Center " + model.Name + " created successfully",true);
-                _logger.InformationLog(success.LoggerMessage,"Create Cost Center",String.Empty,username);
-
-                return success;
+                _logger.InformationLog("Cost Center " + model.Name + " created successfully","Create Cost Center",string.Empty,username);
+                return SystemSucceededTask.Success("Cost Center " + model.Name + " created successfully");
             }
-            catch (SqlException ex)
+            catch (Exception ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Cost Center " + model.Name + " created unsuccessfully","Error","Cost Center " + model.Name + " created unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Create Cost Center",ex.InnerException.Message,username);
-                return error;
+                _logger.ErrorLog(ex.Message,"Create Cost Center",ex.InnerException.Message,username);
+                return SystemSucceededTask.Failed("Cost Center " + model.Name + " created unsuccessful",ex.InnerException.Message,true,false);
             }
         }
 
-        public async Task<SuccessErrorHandling> EditCostCenter(CostCenterEditViewModel model,string username)
+        public async Task<SystemSucceededTask> EditCostCenter(CostCenterEditViewModel model,string username)
         {
             if (model == null)
             {
-                var error = _logger.SuccessErrorHandlingTask("Cost Center not found","Error","Cost Center  not found",false);
-                _logger.ErrorLog(error.LoggerMessage,"Edit Cost Center","Cost Center not found",username);
-                return error;
+                _logger.ErrorLog("Cost Center not found","Edit Cost Center","Cost Center not found",username);
+                return SystemSucceededTask.Failed("Cost Center not found",string.Empty, false, true);
             }
 
             var costCenter = await _costCenter.Query().FirstAsync(x => x.Id == model.Id);
@@ -309,15 +330,13 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _costCenter.SaveChangesAsync();
-                var success = _logger.SuccessErrorHandlingTask("Cost Center " + model.Name + " updated successfully","Success","Cost Center " + model.Name + " updated successfully",true);
-                _logger.InformationLog(success.LoggerMessage,"Edit Cost Center",String.Empty,username);
-                return success;
+                _logger.InformationLog("Cost Center " + model.Name + " updated successfully","Edit Cost Center",string.Empty,username);
+                return SystemSucceededTask.Success("Cost Center " + model.Name + " updated successfully");
             }
             catch (SqlException ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Edit Center " + model.Name + " updated unsuccessfully","Error","Cost Center " + model.Name + " updated unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Edit Cost Center",ex.InnerException.Message,username);
-                return error;
+                _logger.ErrorLog(ex.Message,"Edit Cost Center",ex.InnerException.Message,username);
+                return SystemSucceededTask.Failed("Edit Center " + model.Name + " updated unsuccessfully",ex.InnerException.Message, false, true);
             }
         }
 
@@ -341,12 +360,14 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 _location.SaveChanges();
+                _logger.InformationLog("Cost Center " + costCenter.Name + " Enable/Disable unsuccessful",
+                    "Enable/Disable Cost Center", string.Empty, username);
                 return true;
             }
             catch (SqlException ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Cost Center " + costCenter.Name + " Enable/Disable unsuccessfully","Error","Product " + costCenter.Name + " Enable/Disable unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Enable/Disable Cost Center",ex.InnerException.Message,username);
+                _logger.ErrorLog("Cost Center " + costCenter.Name + " Enable/Disable unsuccessful",
+                    "Enable/Disable Cost Center", ex.InnerException.Message, username);
                 return false;
             }
         }
@@ -357,7 +378,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return exists == null;
         }
         
-        public async Task<SuccessErrorHandling> AddProductsToCostCenter(ProductCostCenterViewModel model,string username,params string[] selectedProducts)
+        public async Task<SystemSucceededTask> AddProductsToCostCenter(ProductCostCenterViewModel model,string username,params string[] selectedProducts)
         {
             //TODO: improve try catch
             var productsCostCenter = _costCenterProductDetail.Query().Where(x => x.CostCenterId == model.CostCenterId).ToList();
@@ -394,15 +415,14 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _costCenterProductDetail.SaveChangesAsync();
-                var success = _logger.SuccessErrorHandlingTask("Cost Center " + model.Name + " : product added successfully","Success","Cost Center " + model.Name + " : product added successfully",true);
-                _logger.InformationLog(success.LoggerMessage,"Edit Cost Center",String.Empty,username);
-                return success;
+                _logger.InformationLog("Cost Center " + model.Name + " : product added successfully","Edit Cost Center",string.Empty,username);
+                return SystemSucceededTask.Success("Cost Center " + model.Name + " : product added successfully");
             }
             catch (SqlException ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Cost Center " + model.Name + " product added unsuccessfully","Error","Cost Center " + model.Name + " product added unsuccessfully",false);
-                _logger.InformationLog(error.LoggerMessage,"Edit Cost Center",ex.InnerException.Message,username);
-                return error;
+                _logger.ErrorLog(ex.Message,"Edit Cost Center",ex.InnerException.Message,username);
+                return SystemSucceededTask.Failed("Cost Center " + model.Name + " product added unsuccessful",
+                    ex.InnerException.Message, true, false);
             }
         }
 
@@ -446,7 +466,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return products.ToList();
         }
 
-        public async Task<SuccessErrorHandling> SaveConsumption(long costCenterId, string[] products, string[] values,string username,DateTimeOffset? lateCreatedOn)
+        public async Task<SystemSucceededTask> SaveConsumption(long costCenterId, string[] products, string[] values,string username,DateTimeOffset? lateCreatedOn)
         {
             var count = products.Length;
             var costCenter = GetCostCenterById(costCenterId);
@@ -475,7 +495,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                         WarehouseCode = costCenter.WarehouseCode,
                         ProductId = getProduct.Id,
                         BaseUnit = getProduct.BaseUnit,
-                        Weight = Convert.ToInt32(values[i])
+                        Weight = Convert.ToDecimal(values[i])
                         
                     };
                     _consumptioDetails.Add(consumptionDetail);
@@ -483,29 +503,30 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 try
                 {
                     await _consumptioDetails.SaveChangesAsync();
-                    var success = _logger.SuccessErrorHandlingTask("Consumption " + consumptionHeader.Name + " : created successfully","Success","Consumption " + consumptionHeader.Name + " : created successfully",true);
-                    _logger.InformationLog(success.LoggerMessage,"Create Consumption",String.Empty,username);
-                    return success;
+                    _logger.InformationLog("Consumption " + consumptionHeader.Name + " : created successfully",
+                        "Create Consumption", string.Empty, username);
+                    return SystemSucceededTask.Success("Consumption " + consumptionHeader.Name +
+                                                       " : created successfully");
                 }
                 catch (SqlException ex)
                 {
                     _consumption.Remove(consumptionHeader);
                     await _consumption.SaveChangesAsync();
-                    var error = _logger.SuccessErrorHandlingTask("Consumption " + consumptionHeader.Name + " created unsuccessfully","Error","Consumption " + consumptionHeader.Name + " created unsuccessfully",false);
-                    _logger.InformationLog(error.LoggerMessage,"Create Consumption Details",ex.InnerException.Message,username);
-                    return error;
+                    _logger.ErrorLog(ex.Message,"Create Consumption Details",ex.InnerException.Message,username);
+                    return SystemSucceededTask.Failed("Consumption " + consumptionHeader.Name + " created unsuccessful",
+                        ex.InnerException.Message, true, false);
                 }
                 
             }
             catch (SqlException ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Consumption " + consumptionHeader.Name + " created unsuccessfully","Error","Consumption " + consumptionHeader.Name + " created unsuccessfully",false);
-                _logger.InformationLog(error.LoggerMessage,"Create Consumption",ex.InnerException.Message,username);
-                return error;
+                _logger.ErrorLog(ex.Message,"Create Consumption",ex.InnerException.Message,username);
+                return SystemSucceededTask.Failed("Consumption " + consumptionHeader.Name + " created unsuccessfully",
+                    ex.InnerException.Message, true, false);
             }
         }
 
-        public async Task<SuccessErrorHandling> SaveConsumptionEdit(long consumptionId, string[] products, string[] values,string username)
+        public async Task<SystemSucceededTask> SaveConsumptionEdit(long consumptionId, string[] products, string[] values,string username)
         {
             var count = products.Length;
             var consumptionHeader = _consumption.Query().FirstOrDefault(x => x.Id == consumptionId);
@@ -538,33 +559,34 @@ namespace Itsomax.Module.FarmSystemCore.Services
                             WarehouseCode = oldConsumptionDetail.FirstOrDefault().WarehouseCode,
                             ProductId = getProduct.Id,
                             BaseUnit = getProduct.BaseUnit,
-                            Weight = Convert.ToInt32(values[i])
+                            Weight = Convert.ToDecimal(values[i])
                         
                         };
                         _consumptioDetails.Add(consumptionDetail);
                     }
 
                     await _consumptioDetails.SaveChangesAsync();
-                    var success = _logger.SuccessErrorHandlingTask("Consumption " + consumptionHeader.Name + " : updated successfully","Success","Consumption " + consumptionHeader.Name + " : updated successfully",true);
-                    _logger.InformationLog(success.LoggerMessage,"Create Consumption",String.Empty,username);
-                    return success;
+                    _logger.InformationLog("Consumption " + consumptionHeader.Name + " : updated successfully","Create Consumption Edit",string.Empty,username);
+                    return SystemSucceededTask.Success("Consumption " + consumptionHeader.Name + " : updated successfully");
                 }
                 catch (SqlException ex)
                 {
                     var consumptionReverse = _consumption.Query().FirstOrDefault(x => x.Id == consumptionId);
                     consumptionReverse.CreatedOn = oldConsumptionDate;
                     await _consumption.SaveChangesAsync();
-                    var error = _logger.SuccessErrorHandlingTask("Consumption " + consumptionHeader.Name + " updated unsuccessfully","Error","Consumption " + consumptionHeader.Name + " updated unsuccessfully",false);
-                    _logger.InformationLog(error.LoggerMessage,"Create Consumption",ex.InnerException.Message,username);
-                    return error;
+                    _logger.ErrorLog(ex.Message,"Create Consumption Edit",ex.InnerException.Message,username);
+                    return SystemSucceededTask.Failed(
+                        "Consumption " + consumptionHeader.Name + " updated unsuccessfully", ex.InnerException.Message,
+                        true, false);
                 }
                 
             }
             catch (SqlException ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Consumption " + consumptionHeader.Name + " updated unsuccessfully","Error","Consumption " + consumptionHeader.Name + " updated unsuccessfully",false);
-                _logger.InformationLog(error.LoggerMessage,"Create Consumption",ex.InnerException.Message,username);
-                return error;
+                _logger.ErrorLog(ex.Message,"Create Consumption Edit",ex.InnerException.Message,username);
+                return SystemSucceededTask.Failed(
+                    "Consumption " + consumptionHeader.Name + " updated unsuccessfully", ex.InnerException.Message,
+                    true, false);
             }
         }
         
@@ -627,13 +649,12 @@ namespace Itsomax.Module.FarmSystemCore.Services
             }
         }
 
-        public async Task<SuccessErrorHandling> AddProduct(ProductViewModel model,string username)
+        public async Task<SystemSucceededTask> AddProduct(ProductViewModel model,string username)
         {
             if (!ValidateProductCode(model.Code))
             {
-                var error = _logger.SuccessErrorHandlingTask("Product " + model.Name + " code already exists","Error","Product " + model.Name + " code already exists",false);
-                _logger.ErrorLog(error.LoggerMessage,"Create Product","Code for product already exists",username);
-                return error;
+                _logger.ErrorLog("Product " + model.Name + " code already exists","Create Product","Code for product already exists",username);
+                return SystemSucceededTask.Failed("Product " + model.Name + " code already exists",string.Empty, false, true);
             }
             var product = new Products
             {
@@ -647,26 +668,24 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _products.SaveChangesAsync();
-                var success = _logger.SuccessErrorHandlingTask("Product " + model.Name + " created successfully","Success","Product " + model.Name + " created successfully",true);
-                _logger.InformationLog(success.LoggerMessage,"Create Product",String.Empty);
-                return success;
+                _logger.InformationLog("Product " + model.Name + " created successfully","Create Product",string.Empty,username);
+                return SystemSucceededTask.Success("Product " + model.Name + " created successfully");
 
             }
             catch (Exception ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Product " + model.Name + " created unsuccessfully","Error","Product " + model.Name + " created unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Create Product",ex.InnerException.Message);
-                return error;
+                _logger.ErrorLog(ex.Message,"Create Product",ex.InnerException.Message,username);
+                return SystemSucceededTask.Failed("Product " + model.Name + " created unsuccessfully",
+                    ex.InnerException.Message, true, false);
             }
         }
 
-        public async Task<SuccessErrorHandling> EditProduct(ProductEditViewModel model, string username)
+        public async Task<SystemSucceededTask> EditProduct(ProductEditViewModel model, string username)
         {
             if (model == null)
             {
-                var error = _logger.SuccessErrorHandlingTask("Product not found","Error","Product not found",false);
-                _logger.ErrorLog(error.LoggerMessage,"Edit Product","Product not found",username);
-                return error;
+                _logger.ErrorLog("Product not found","Edit Product","Product not found",username);
+                return SystemSucceededTask.Failed("Product not found", string.Empty, false, true);
             }
 
             var products = await _products.Query().FirstAsync(x => x.Id == model.Id);
@@ -678,15 +697,14 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _products.SaveChangesAsync();
-                var success = _logger.SuccessErrorHandlingTask("Product " + model.Name + " updated successfully","Success","Product " + model.Name + " updated successfully",true);
-                _logger.InformationLog(success.LoggerMessage,"Edit Product",String.Empty,username);
-                return success;
+                _logger.InformationLog("Product " + model.Name + " updated successfully","Edit Product",string.Empty,username);
+                return SystemSucceededTask.Success("Product " + model.Name + " updated successfully");
             }
             catch (SqlException ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Edit Product " + model.Name + " updated unsuccessfully","Error","Product " + model.Name + " updated unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Edit Product",ex.InnerException.Message,username);
-                return error;
+                _logger.ErrorLog(ex.Message,"Edit Product",ex.InnerException.Message,username);
+                return SystemSucceededTask.Failed("Edit Product " + model.Name + " updated unsuccessfully",
+                    ex.InnerException.Message, true, false);
             }
         }
 
@@ -710,12 +728,12 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 _location.SaveChanges();
+                _logger.InformationLog("Enable/Disable product successfully","Enable/Disable Product",string.Empty,username);
                 return true;
             }
             catch (SqlException ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Product " + products.Name + " Enable/Disable unsuccessfully","Error","Product " + products.Name + " Enable/Disable unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Enable/Disable Product",ex.InnerException.Message,username);
+                _logger.ErrorLog(ex.Message,"Enable/Disable Product",ex.InnerException.Message,username);
                 return false;
             }
         }
@@ -740,14 +758,12 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 _location.SaveChanges();
-                var success = _logger.SuccessErrorHandlingTask("Base Unit " + baseUnit.Name + " Enable/Disable successfully", "Success", "Base Unit " + baseUnit.Name + " Enable/Disable successfully", true);
-                _logger.ErrorLog(success.LoggerMessage, "Enable/Disable Base Unit", String.Empty, username);
+                _logger.InformationLog("Base Unit " + baseUnit.Name + " Enable/Disable successfully", "Enable/Disable Base Unit", string.Empty, username);
                 return true;
             }
             catch (SqlException ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Base Unit " + baseUnit.Name + " Enable/Disable unsuccessfully","Error","Base Unit " + baseUnit.Name + " Enable/Disable unsuccessfully",false);
-                _logger.ErrorLog(error.LoggerMessage,"Enable/Disable Base Unit",ex.InnerException.Message,username);
+                _logger.ErrorLog(ex.Message,"Enable/Disable Base Unit",ex.InnerException.Message,username);
                 return false;
             }
         }
@@ -1039,22 +1055,18 @@ namespace Itsomax.Module.FarmSystemCore.Services
                         await _costCenterProductDetail.SaveChangesAsync();
                     }
                 }
-                var error = _logger.SuccessErrorHandlingTask("Load Initial Success", "Error", "Load Initial Success", true);
-                _logger.ErrorLog(error.LoggerMessage, "Load Initial", String.Empty, String.Empty);
+                _logger.InformationLog("Load Initial Success", "Load Initial", string.Empty, string.Empty);
 				return true;
             }
             catch (Exception ex)
             {
-                var error = _logger.SuccessErrorHandlingTask("Load Initial Failed", "Error", "Load Initial Failed", false);
-                _logger.ErrorLog(error.LoggerMessage, "Load Initial", ex.InnerException.Message, String.Empty);
+                _logger.ErrorLog(ex.Message, "Load Initial", ex.InnerException.Message, string.Empty);
 				return false;
             }
 
         }
 		public IEnumerable<ConsumptionReport> ConsumptionReport(DateTime reportDate,int folio,string warehouseName )
 		{
-            //var testDate = reportDate.ToString("yyyyMMdd");
-            //var culture = new CultureInfo("cl-ES");
             var query =
 		        from cd in _consumptioDetails.Query()
 		        join pr in _products.Query() on cd.ProductId equals pr.Id

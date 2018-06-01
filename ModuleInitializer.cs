@@ -15,7 +15,7 @@ namespace Itsomax.Module.FarmSystemCore
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
-            serviceCollection.AddSingleton<IManageFarmInterface, ManageFarmInterface>();
+            serviceCollection.AddScoped<IManageFarmInterface, ManageFarmInterface>();
         }
     }
 }
