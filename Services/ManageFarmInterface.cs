@@ -826,28 +826,6 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return exists == null;
         }
 
-        public async Task<SucceededTask> AddActivityProducts(LocationViewModel model)
-        {
-            var activityProduct = new CostCenterProducts()
-            {
-                CreatedOn = DateTimeOffset.Now,
-                Name = model.Name
-            };
-
-            _costCenterProduct.Add(activityProduct);
-
-            try
-            {
-                await _costCenterProduct.SaveChangesAsync();
-                return SucceededTask.Success;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                return SucceededTask.Failed("");
-            }
-        }
-
         public IEnumerable<Products> GetProducts()
         {
             return _products.Query();
