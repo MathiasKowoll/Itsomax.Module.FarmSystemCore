@@ -1,8 +1,6 @@
-﻿using Itsomax.Data.Infrastructure.Models;
-
-namespace Itsomax.Module.FarmSystemCore.Models
+﻿namespace Itsomax.Module.FarmSystemCore.Models
 {
-    public class CostCenterProductsDetails : EntityBase
+    public class CostCenterProductsDetails
     {
         public long ProductId { get; set; }
         public Products Product { get; set; }

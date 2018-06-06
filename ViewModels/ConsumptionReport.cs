@@ -18,7 +18,7 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public string CenterCostCode { get; set; }
         public string ProductCode { get; set; }
         public string BaseUnit { get; set; }
-        public int Amount { get; set; }
+        public decimal Amount { get; set; }
 
     }
 

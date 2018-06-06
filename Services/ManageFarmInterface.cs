@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Itsomax.Data.Infrastructure.Data;
+using Itsomax.Module.Core.Data;
 using Itsomax.Module.Core.Extensions;
 using Itsomax.Module.Core.Interfaces;
 using Itsomax.Module.FarmSystemCore.Interfaces;
@@ -23,7 +24,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
         private readonly IRepository<Locations> _location;
         private readonly IRepository<CostCenter> _costCenter;
         private readonly IRepository<Products> _products;
-        private readonly IRepository<CostCenterProductsDetails> _costCenterProductDetail;
+        private readonly ItsomaxDbContext _context;
         private readonly IRepository<CostCenterProducts> _costCenterProduct;
         private readonly IRepository<BaseUnits> _baseUnits;
         private readonly IRepository<Consumptions> _consumption;
@@ -31,16 +32,17 @@ namespace Itsomax.Module.FarmSystemCore.Services
         private readonly ILogginToDatabase _logger;
         private readonly IHostingEnvironment _hostingEnvironment;
         
-        public ManageFarmInterface(IRepository<Locations> location,ILogginToDatabase logger,IRepository<CostCenter> costCenter,
-            IRepository<Products> products,IRepository<CostCenterProductsDetails> costCenterProductDetail,
-            IRepository<CostCenterProducts> costCenterProduct,IRepository<BaseUnits> baseUnits,IRepository<Consumptions> consumption,
+        public ManageFarmInterface(IRepository<Locations> location,ILogginToDatabase logger,
+            IRepository<CostCenter> costCenter,
+            IRepository<Products> products,ItsomaxDbContext context,IRepository<Consumptions> consumption,
+            IRepository<CostCenterProducts> costCenterProduct,IRepository<BaseUnits> baseUnits,
             IRepository<ConsumptionDetails> consumptioDetails, IHostingEnvironment hostingEnvironment)
         {
             _location = location;
             _logger = logger;
             _costCenter = costCenter;
             _products = products;
-            _costCenterProductDetail = costCenterProductDetail;
+            _context = context;
             _costCenterProduct = costCenterProduct;
             _baseUnits = baseUnits;
             _consumption = consumption;
@@ -62,7 +64,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _baseUnits.SaveChangesAsync();
-                _logger.InformationLog("Base unit " + model.Name + " created successfully", "Create Base Unit", String.Empty, username);
+                _logger.InformationLog("Base unit " + model.Name + " created successfully", "Create Base Unit",
+                    string.Empty, username);
                 return SystemSucceededTask.Success("Base unit " + model.Name + " created successfully");
             }
             catch (Exception ex)
@@ -124,7 +127,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             if (!ValidateLocationCode(model.Code))
             {
                 _logger.ErrorLog("Code for location already exists","Create Location",string.Empty,username);
-                return SystemSucceededTask.Failed("Location " + model.Name + " code already exists",string.Empty,false,true);
+                return SystemSucceededTask.Failed("Location " + model.Name + " code already exists", string.Empty,
+                    false, true);
             }
 
             var location = new Locations()
@@ -141,7 +145,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             {
                 
                 await _location.SaveChangesAsync();
-                _logger.InformationLog("Location " + model.Name + " created successfully","Create Location",string.Empty,username);
+                _logger.InformationLog("Location " + model.Name + " created successfully", "Create Location",
+                    string.Empty, username);
                 return SystemSucceededTask.Success("Location " + model.Name + " created successfully");
             }
             catch (Exception ex)
@@ -245,10 +250,20 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 var locationList = new List<LocationList>();   
                 var locList = (from a in GetActiveLocation()
                     select new { LocationId = a.Id, LocationName = a.Name,Selected = false }).ToList();
-                locationList.Add( new LocationList {LocationId = 0, LocationName = "Select a Location",Selected = true});
+                locationList.Add(new LocationList
+                {
+                    LocationId = 0,
+                    LocationName = "Select a Location",
+                    Selected = true
+                });
                 foreach (var item in locList)
                 {
-                    locationList.Add( new LocationList {LocationId = item.LocationId,LocationName = item.LocationName,Selected = false});
+                    locationList.Add(new LocationList
+                    {
+                        LocationId = item.LocationId,
+                        LocationName = item.LocationName,
+                        Selected = false
+                    });
                 }
 
                 return locationList;
@@ -263,8 +278,13 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 foreach (var item in locList)
                 {
                     bool selected = item.LocationId == costCenter.LocationId;
-                    locationList.Add( new LocationList {LocationId = item.LocationId,LocationName = item.LocationName,Selected = selected});
-                    
+                    locationList.Add(new LocationList
+                    {
+                        LocationId = item.LocationId,
+                        LocationName = item.LocationName,
+                        Selected = selected
+                    });
+
                 }
                 return locationList;
 
@@ -276,8 +296,10 @@ namespace Itsomax.Module.FarmSystemCore.Services
         {
             if (!ValidateCostCenterCode(model.Code))
             {
-                _logger.ErrorLog("Cost center " + model.Name + " code already exists","Create Cost Center","Code for cost center already exists",username);
-                return SystemSucceededTask.Failed("Cost center " + model.Name + " code already exists",string.Empty,false,true);
+                _logger.ErrorLog("Cost center " + model.Name + " code already exists", "Create Cost Center",
+                    "Code for cost center already exists", username);
+                return SystemSucceededTask.Failed("Cost center " + model.Name + " code already exists", string.Empty,
+                    false, true);
             }
 
             var centerCost = new CostCenter()
@@ -299,13 +321,15 @@ namespace Itsomax.Module.FarmSystemCore.Services
             {
                 
                 await _costCenter.SaveChangesAsync();
-                _logger.InformationLog("Cost Center " + model.Name + " created successfully","Create Cost Center",string.Empty,username);
+                _logger.InformationLog("Cost Center " + model.Name + " created successfully", "Create Cost Center",
+                    string.Empty, username);
                 return SystemSucceededTask.Success("Cost Center " + model.Name + " created successfully");
             }
             catch (Exception ex)
             {
                 _logger.ErrorLog(ex.Message,"Create Cost Center",ex.InnerException.Message,username);
-                return SystemSucceededTask.Failed("Cost Center " + model.Name + " created unsuccessful",ex.InnerException.Message,true,false);
+                return SystemSucceededTask.Failed("Cost Center " + model.Name + " created unsuccessful",
+                    ex.InnerException.Message, true, false);
             }
         }
 
@@ -330,13 +354,15 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _costCenter.SaveChangesAsync();
-                _logger.InformationLog("Cost Center " + model.Name + " updated successfully","Edit Cost Center",string.Empty,username);
+                _logger.InformationLog("Cost Center " + model.Name + " updated successfully", "Edit Cost Center",
+                    string.Empty, username);
                 return SystemSucceededTask.Success("Cost Center " + model.Name + " updated successfully");
             }
             catch (SqlException ex)
             {
                 _logger.ErrorLog(ex.Message,"Edit Cost Center",ex.InnerException.Message,username);
-                return SystemSucceededTask.Failed("Edit Center " + model.Name + " updated unsuccessfully",ex.InnerException.Message, false, true);
+                return SystemSucceededTask.Failed("Edit Center " + model.Name + " updated unsuccessfully",
+                    ex.InnerException.Message, false, true);
             }
         }
 
@@ -378,17 +404,16 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return exists == null;
         }
         
-        public async Task<SystemSucceededTask> AddProductsToCostCenter(ProductCostCenterViewModel model,string username,params string[] selectedProducts)
+        public async Task<SystemSucceededTask> AddProductsToCostCenter(ProductCostCenterViewModel model,
+            string username,params string[] selectedProducts)
         {
             //TODO: improve try catch
-            var productsCostCenter = _costCenterProductDetail.Query().Where(x => x.CostCenterId == model.CostCenterId).ToList();
+            var productsCostCenter = _context.Set<CostCenterProductsDetails>()
+                .Where(x => x.CostCenterId == model.CostCenterId).ToList();
             if (productsCostCenter.Any())
             {
-                foreach (var item in productsCostCenter)
-                {
-                    _costCenterProductDetail.Remove(_costCenterProductDetail.Query().FirstOrDefault(x => x.CostCenterId == model.CostCenterId && x.ProductId == item.ProductId));
-                }
-                await _costCenterProductDetail.SaveChangesAsync();
+                _context.Set<CostCenterProductsDetails>().RemoveRange(productsCostCenter);
+                await _context.SaveChangesAsync();
             }
 
             var costCenterProduct = new CostCenterProducts
@@ -400,22 +425,24 @@ namespace Itsomax.Module.FarmSystemCore.Services
             _costCenterProduct.Add(costCenterProduct);
             await _costCenterProduct.SaveChangesAsync();
 
-            foreach (var item in selectedProducts)
-            {
-                var product = GetProductByName(item);
-                var costCenterDetail = new CostCenterProductsDetails
+            IList<CostCenterProductsDetails> costcenter = selectedProducts.Select(GetProductByName)
+                .Select(product => new CostCenterProductsDetails
                 {
                     CostCenterId = model.CostCenterId,
                     ProductId = product.Id,
                     CostCenterProductsId = costCenterProduct.Id
-                };
-                _costCenterProductDetail.Add(costCenterDetail);
-            }
+                }).ToList();
 
+            if (costcenter.Any())
+            {
+                _context.Set<CostCenterProductsDetails>().AddRange(costcenter);
+            }
+            
             try
             {
-                await _costCenterProductDetail.SaveChangesAsync();
-                _logger.InformationLog("Cost Center " + model.Name + " : product added successfully","Edit Cost Center",string.Empty,username);
+                await _context.SaveChangesAsync();
+                _logger.InformationLog("Cost Center " + model.Name + " : product added successfully",
+                    "Edit Cost Center", string.Empty, username);
                 return SystemSucceededTask.Success("Cost Center " + model.Name + " : product added successfully");
             }
             catch (SqlException ex)
@@ -429,7 +456,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
         public string GetCostCenterProductName(long costCenterId)
         {
             var name = (from cc in _costCenter.Query()
-                join pd in _costCenterProductDetail.Query() on cc.Id equals pd.CostCenterId
+                join pd in _context.Set<CostCenterProductsDetails>() on cc.Id equals pd.CostCenterId
                 join ccname in _costCenterProduct.Query() on pd.CostCenterProductsId equals ccname.Id
                 where cc.Id == costCenterId
                 select(ccname.Name)).FirstOrDefault();
@@ -439,7 +466,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
         public bool GetCostCenterProductActive(long costCenterId)
         {
             var active = (from cc in _costCenter.Query()
-                join pd in _costCenterProductDetail.Query() on cc.Id equals pd.CostCenterId
+                join pd in _context.Set<CostCenterProductsDetails>() on cc.Id equals pd.CostCenterId
                 join ccname in _costCenterProduct.Query() on pd.CostCenterProductsId equals ccname.Id
                 where cc.Id == costCenterId
                 select(ccname.Active)).FirstOrDefault();
@@ -459,14 +486,15 @@ namespace Itsomax.Module.FarmSystemCore.Services
         public IList<string> GetProductsForCostCenter(long centerCostId)
         {
             var products = from cc in _costCenter.Query().ToList()
-                join pd in _costCenterProductDetail.Query().ToList() on cc.Id equals pd.CostCenterId
+                join pd in _context.Set<CostCenterProductsDetails>().ToList() on cc.Id equals pd.CostCenterId
                 join pr in _products.Query().ToList() on pd.ProductId equals pr.Id
                 where cc.Id == centerCostId
                 select(pr.Name);
             return products.ToList();
         }
 
-        public async Task<SystemSucceededTask> SaveConsumption(long costCenterId, string[] products, string[] values,string username,DateTimeOffset? lateCreatedOn)
+        public async Task<SystemSucceededTask> SaveConsumption(long costCenterId, string[] products, string[] values,
+            string username,DateTimeOffset? lateCreatedOn)
         {
             var count = products.Length;
             var costCenter = GetCostCenterById(costCenterId);
@@ -526,7 +554,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             }
         }
 
-        public async Task<SystemSucceededTask> SaveConsumptionEdit(long consumptionId, string[] products, string[] values,string username)
+        public async Task<SystemSucceededTask> SaveConsumptionEdit(long consumptionId, string[] products, 
+            string[] values,string username)
         {
             var count = products.Length;
             var consumptionHeader = _consumption.Query().FirstOrDefault(x => x.Id == consumptionId);
@@ -566,8 +595,10 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     }
 
                     await _consumptioDetails.SaveChangesAsync();
-                    _logger.InformationLog("Consumption " + consumptionHeader.Name + " : updated successfully","Create Consumption Edit",string.Empty,username);
-                    return SystemSucceededTask.Success("Consumption " + consumptionHeader.Name + " : updated successfully");
+                    _logger.InformationLog("Consumption " + consumptionHeader.Name + " : updated successfully",
+                        "Create Consumption Edit", string.Empty, username);
+                    return SystemSucceededTask.Success("Consumption " + consumptionHeader.Name +
+                                                       " : updated successfully");
                 }
                 catch (SqlException ex)
                 {
@@ -623,10 +654,20 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 var baseUnitLists = new List<BaseUnitList>();   
                 var locList = (from a in GetActiveBaseUnits()
                     select new { BaseUnutId = a.Id, BaseUnitName = a.Name,Selected = false }).ToList();
-                baseUnitLists.Add( new BaseUnitList {BaseUnitId = 0, BaseUnitName = "Select a Base Unit",Selected = true});
+                baseUnitLists.Add(new BaseUnitList
+                {
+                    BaseUnitId = 0,
+                    BaseUnitName = "Select a Base Unit",
+                    Selected = true
+                });
                 foreach (var item in locList)
                 {
-                    baseUnitLists.Add( new BaseUnitList {BaseUnitId = item.BaseUnutId,BaseUnitName = item.BaseUnitName,Selected = false});
+                    baseUnitLists.Add(new BaseUnitList
+                    {
+                        BaseUnitId = item.BaseUnutId,
+                        BaseUnitName = item.BaseUnitName,
+                        Selected = false
+                    });
                 }
 
                 return baseUnitLists;
@@ -641,8 +682,13 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 foreach (var item in locList)
                 {
                     bool selected = item.BaseUnitId == product.BaseUnitId;
-                    baseUnitLists.Add( new BaseUnitList {BaseUnitId = item.BaseUnitId,BaseUnitName = item.BaseUnitName,Selected = selected});
-                    
+                    baseUnitLists.Add(new BaseUnitList
+                    {
+                        BaseUnitId = item.BaseUnitId,
+                        BaseUnitName = item.BaseUnitName,
+                        Selected = selected
+                    });
+
                 }
                 return baseUnitLists;
 
@@ -653,8 +699,10 @@ namespace Itsomax.Module.FarmSystemCore.Services
         {
             if (!ValidateProductCode(model.Code))
             {
-                _logger.ErrorLog("Product " + model.Name + " code already exists","Create Product","Code for product already exists",username);
-                return SystemSucceededTask.Failed("Product " + model.Name + " code already exists",string.Empty, false, true);
+                _logger.ErrorLog("Product " + model.Name + " code already exists", "Create Product",
+                    "Code for product already exists", username);
+                return SystemSucceededTask.Failed("Product " + model.Name + " code already exists", string.Empty, false,
+                    true);
             }
             var product = new Products
             {
@@ -668,7 +716,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _products.SaveChangesAsync();
-                _logger.InformationLog("Product " + model.Name + " created successfully","Create Product",string.Empty,username);
+                _logger.InformationLog("Product " + model.Name + " created successfully", "Create Product",
+                    string.Empty, username);
                 return SystemSucceededTask.Success("Product " + model.Name + " created successfully");
 
             }
@@ -697,7 +746,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 await _products.SaveChangesAsync();
-                _logger.InformationLog("Product " + model.Name + " updated successfully","Edit Product",string.Empty,username);
+                _logger.InformationLog("Product " + model.Name + " updated successfully", "Edit Product", string.Empty,
+                    username);
                 return SystemSucceededTask.Success("Product " + model.Name + " updated successfully");
             }
             catch (SqlException ex)
@@ -728,7 +778,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 _location.SaveChanges();
-                _logger.InformationLog("Enable/Disable product successfully","Enable/Disable Product",string.Empty,username);
+                _logger.InformationLog("Enable/Disable product successfully", "Enable/Disable Product", string.Empty,
+                    username);
                 return true;
             }
             catch (SqlException ex)
@@ -758,7 +809,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
             try
             {
                 _location.SaveChanges();
-                _logger.InformationLog("Base Unit " + baseUnit.Name + " Enable/Disable successfully", "Enable/Disable Base Unit", string.Empty, username);
+                _logger.InformationLog("Base Unit " + baseUnit.Name + " Enable/Disable successfully",
+                    "Enable/Disable Base Unit", string.Empty, username);
                 return true;
             }
             catch (SqlException ex)
@@ -779,7 +831,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             var activityProduct = new CostCenterProducts()
             {
                 CreatedOn = DateTimeOffset.Now,
-                Name = model.Name,
+                Name = model.Name
             };
 
             _costCenterProduct.Add(activityProduct);
@@ -823,7 +875,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
         public IEnumerable<ProductList> GetProductList(long costCenterId)
         {
             var list = from cc in _costCenter.Query()
-                join pd in _costCenterProductDetail.Query() on cc.Id equals pd.CostCenterId
+                join pd in _context.Set<CostCenterProductsDetails>() on cc.Id equals pd.CostCenterId
                 join pr in _products.Query() on pd.ProductId equals pr.Id
                 join ccname in _costCenterProduct.Query() on pd.CostCenterProductsId equals ccname.Id
                 join bu in _baseUnits.Query() on pr.BaseUnitId equals bu.Id
@@ -865,7 +917,12 @@ namespace Itsomax.Module.FarmSystemCore.Services
             locationList.Add( new LocationList {LocationId = 0, LocationName = "Select a Cost Center",Selected = true});
             foreach (var item in locList)
             {
-                locationList.Add( new LocationList {LocationId = item.LocationId,LocationName = item.LocationName,Selected = false});
+                locationList.Add(new LocationList
+                {
+                    LocationId = item.LocationId,
+                    LocationName = item.LocationName,
+                    Selected = false
+                });
             }
 
             return locationList;
@@ -880,7 +937,12 @@ namespace Itsomax.Module.FarmSystemCore.Services
             locationList.Add( new LocationList {LocationId = 0, LocationName = "Select a Cost Center",Selected = true});
             foreach (var item in locList)
             {
-                locationList.Add( new LocationList {LocationId = item.LocationId,LocationName = item.LocationName,Selected = false});
+                locationList.Add(new LocationList
+                {
+                    LocationId = item.LocationId,
+                    LocationName = item.LocationName,
+                    Selected = false
+                });
             }
 
             return locationList;
@@ -892,10 +954,15 @@ namespace Itsomax.Module.FarmSystemCore.Services
             var locList = (from a in GetActiveCostCenters()
                 where a.IsMedical == true
                 select new { LocationId = a.Id, LocationName = a.Name,Selected = false }).ToList();
-            locationList.Add( new LocationList {LocationId = 0, LocationName = "Select a Cost Center",Selected = true});
+            locationList.Add(new LocationList {LocationId = 0, LocationName = "Select a Cost Center", Selected = true});
             foreach (var item in locList)
             {
-                locationList.Add( new LocationList {LocationId = item.LocationId,LocationName = item.LocationName,Selected = false});
+                locationList.Add(new LocationList
+                {
+                    LocationId = item.LocationId,
+                    LocationName = item.LocationName,
+                    Selected = false
+                });
             }
 
             return locationList;
@@ -928,8 +995,9 @@ namespace Itsomax.Module.FarmSystemCore.Services
                             
                             if (headerRow.GetCell(j).ToString() == "Name") location.Name = row.GetCell(j).ToString();
                             if (headerRow.GetCell(j).ToString() == "Code") location.Code = row.GetCell(j).ToString();
-                            if (headerRow.GetCell(j).ToString() == "Description") location.Description = row.GetCell(j).ToString();
-                            
+                            if (headerRow.GetCell(j).ToString() == "Description")
+                                location.Description = row.GetCell(j).ToString();
+
                         }
 
                         location.Active = true;
@@ -952,13 +1020,19 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
                             if (headerRow.GetCell(j).ToString() == "Name") costCenter.Name = row.GetCell(j).ToString();
                             if (headerRow.GetCell(j).ToString() == "Code") costCenter.Code = row.GetCell(j).ToString();
-                            if (headerRow.GetCell(j).ToString() == "Description") costCenter.Description = row.GetCell(j).ToString();
-                            if (headerRow.GetCell(j).ToString() == "WarehouseCode") costCenter.WarehouseCode = row.GetCell(j).ToString();
-                            if (headerRow.GetCell(j).ToString() == "Location")costCenter.LocationId = GetLocationByName(row.GetCell(j).ToString()).Id;
-                            if (headerRow.GetCell(j).ToString() == "Meal")costCenter.IsMeal = row.GetCell(j).ToString() == "1";
-                            if (headerRow.GetCell(j).ToString() == "Medical")costCenter.IsMedical = row.GetCell(j).ToString() == "1";
-                            if (headerRow.GetCell(j).ToString() == "Farm")costCenter.IsFarming = row.GetCell(j).ToString() == "1";
-                            
+                            if (headerRow.GetCell(j).ToString() == "Description")
+                                costCenter.Description = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "WarehouseCode")
+                                costCenter.WarehouseCode = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Location")
+                                costCenter.LocationId = GetLocationByName(row.GetCell(j).ToString()).Id;
+                            if (headerRow.GetCell(j).ToString() == "Meal")
+                                costCenter.IsMeal = row.GetCell(j).ToString() == "1";
+                            if (headerRow.GetCell(j).ToString() == "Medical")
+                                costCenter.IsMedical = row.GetCell(j).ToString() == "1";
+                            if (headerRow.GetCell(j).ToString() == "Farm")
+                                costCenter.IsFarming = row.GetCell(j).ToString() == "1";
+
 
                         }
 
@@ -982,7 +1056,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
                             if (headerRow.GetCell(j).ToString() == "Name") baseUnit.Name = row.GetCell(j).ToString();
                             if (headerRow.GetCell(j).ToString() == "Value") baseUnit.Value = row.GetCell(j).ToString();
-                            if (headerRow.GetCell(j).ToString() == "Description") baseUnit.Description = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "Description")
+                                baseUnit.Description = row.GetCell(j).ToString();
 
                         }
 
@@ -1006,8 +1081,10 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
                             if (headerRow.GetCell(j).ToString() == "Name") products.Name = row.GetCell(j).ToString();
                             if (headerRow.GetCell(j).ToString() == "Code") products.Code = row.GetCell(j).ToString();
-                            if (headerRow.GetCell(j).ToString() == "Description") products.Description = row.GetCell(j).ToString();
-                            if (headerRow.GetCell(j).ToString() == "BaseUnit") products.BaseUnitId = GetBaseUnitByValue(row.GetCell(j).ToString()).Id;
+                            if (headerRow.GetCell(j).ToString() == "Description")
+                                products.Description = row.GetCell(j).ToString();
+                            if (headerRow.GetCell(j).ToString() == "BaseUnit")
+                                products.BaseUnitId = GetBaseUnitByValue(row.GetCell(j).ToString()).Id;
 
                         }
                         products.Active = true;
@@ -1030,7 +1107,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
                             if (headerRow.GetCell(j).ToString() == "CostCenterName")
                             {
-                                if (_costCenterProduct.Query().FirstOrDefault(x => x.Name == "Productos para " + row.GetCell(j)) == null)
+                                if (_costCenterProduct.Query().FirstOrDefault(x => x.Name == "Productos para " 
+                                                                                   + row.GetCell(j)) == null)
                                 {
                                     var costCenterProducts = new CostCenterProducts()
                                     {
@@ -1044,15 +1122,20 @@ namespace Itsomax.Module.FarmSystemCore.Services
                                 }
                                 else
                                 {
-                                    costCenterProductsDetails.CostCenterProductsId = _costCenterProduct.Query().FirstOrDefault(x => x.Name == "Productos para " + row.GetCell(j)).Id;
+                                    costCenterProductsDetails.CostCenterProductsId = _costCenterProduct.Query()
+                                        .FirstOrDefault(x => x.Name == "Productos para " + row.GetCell(j)).Id;
                                 }
                             }
-                            if (headerRow.GetCell(j).ToString() == "CostCenterName") costCenterProductsDetails.CostCenterId = GetCostCenterByName(row.GetCell(j).ToString()).Id;
-                            if (headerRow.GetCell(j).ToString() == "ProductCode") costCenterProductsDetails.ProductId = GetProductByCode(row.GetCell(j).ToString()).Id;
+
+                            if (headerRow.GetCell(j).ToString() == "CostCenterName")
+                                costCenterProductsDetails.CostCenterId =
+                                    GetCostCenterByName(row.GetCell(j).ToString()).Id;
+                            if (headerRow.GetCell(j).ToString() == "ProductCode")
+                                costCenterProductsDetails.ProductId = GetProductByCode(row.GetCell(j).ToString()).Id;
 
                         }
-                        _costCenterProductDetail.Add(costCenterProductsDetails);
-                        await _costCenterProductDetail.SaveChangesAsync();
+                        _context.Set<CostCenterProductsDetails>().Add(costCenterProductsDetails);
+                        await _context.SaveChangesAsync();
                     }
                 }
                 _logger.InformationLog("Load Initial Success", "Load Initial", string.Empty, string.Empty);
@@ -1072,7 +1155,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
 		        join pr in _products.Query() on cd.ProductId equals pr.Id
 		        join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
 				join cp in _consumption.Query() on cd.ConsumptionId equals cp.Id
-                where cp.LateCreatedOn.ToString("yyyyMMdd") == reportDate.ToString("yyyyMMdd") && cc.WarehouseCode == warehouseName
+                where cp.LateCreatedOn.ToString("yyyyMMdd") == reportDate.ToString("yyyyMMdd") 
+                      && cc.WarehouseCode == warehouseName
 		        select new ConsumptionReport
                 {
                     Warehouse = cd.WarehouseCode,
@@ -1081,7 +1165,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     CenterCostCode = cc.Code,
                     ProductCode = pr.Code,
                     BaseUnit = cd.BaseUnit,
-                    Amount = (int)cd.Weight
+                    Amount = cd.Weight
 
                 };
 		    var report = query

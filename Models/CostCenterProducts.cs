@@ -19,6 +19,8 @@ namespace Itsomax.Module.FarmSystemCore.Models
         public DateTimeOffset CreatedOn { get; set; }
         [Required]
 		public DateTimeOffset UpdatedOn { get; set; }
-        public IList<CostCenterProductsDetails> CostCenterProductsDetails { get; set; } = new List<CostCenterProductsDetails>();
+
+        public IList<CostCenterProductsDetails> CostCenterProductsDetails { get; set; } =
+            new List<CostCenterProductsDetails>();
     }
 }
