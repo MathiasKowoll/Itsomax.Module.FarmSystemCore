@@ -523,7 +523,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                         WarehouseCode = costCenter.WarehouseCode,
                         ProductId = getProduct.Id,
                         BaseUnit = getProduct.BaseUnit,
-                        Weight = Convert.ToDecimal(values[i])
+                        Weight = Convert.ToDecimal(values[i].Replace(",","."))
                         
                     };
                     _consumptioDetails.Add(consumptionDetail);
@@ -588,7 +588,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                             WarehouseCode = oldConsumptionDetail.FirstOrDefault().WarehouseCode,
                             ProductId = getProduct.Id,
                             BaseUnit = getProduct.BaseUnit,
-                            Weight = Convert.ToDecimal(values[i])
+                            Weight = Convert.ToDecimal(values[i].Replace(",","."))
                         
                         };
                         _consumptioDetails.Add(consumptionDetail);
