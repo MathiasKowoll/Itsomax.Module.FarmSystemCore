@@ -1126,28 +1126,70 @@ namespace Itsomax.Module.FarmSystemCore.Services
             }
 
         }
-		public IEnumerable<ConsumptionReport> ConsumptionReport(DateTime reportDate,int folio,string warehouseName )
+
+        private IList<DateFolio> SetFolio(IList<DateList> dateList,int folio)
+        {
+            var dateFolio = new List<DateFolio>();
+            foreach (var item in dateList)
+            {
+                dateFolio.Add(new DateFolio(){Date = item.Date, Folio = folio});
+                folio++;
+            }
+
+            return dateFolio;
+        }
+
+		public IList<ConsumptionReport> ConsumptionReport(DateTime fromReportDate,DateTime toReportDate,int folio,string warehouseName )
 		{
             var query =
 		        from cd in _consumptioDetails.Query()
 		        join pr in _products.Query() on cd.ProductId equals pr.Id
 		        join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
 				join cp in _consumption.Query() on cd.ConsumptionId equals cp.Id
-                where cp.LateCreatedOn.ToString("yyyyMMdd") == reportDate.ToString("yyyyMMdd") 
+                where Int32.Parse(cp.LateCreatedOn.ToString("yyyyMMdd")) >= Int32.Parse(fromReportDate.ToString("yyyyMMdd"))
+                      && Int32.Parse(cp.LateCreatedOn.ToString("yyyyMMdd")) <= Int32.Parse(toReportDate.ToString("yyyyMMdd"))
                       && cc.WarehouseCode == warehouseName
-		        select new ConsumptionReport
+                orderby cp.LateCreatedOn.ToString("yyyyMMdd")
+                select new ConsumptionReport
                 {
                     Warehouse = cd.WarehouseCode,
-                    Folio = folio,
-                    GeneratedDate = reportDate.ToString("dd/MM/yyyy"),
+                    Folio = 0,
+                    GeneratedDate = cp.LateCreatedOn.ToString("dd/MM/yyyy"), //toReportDate.ToString("dd/MM/yyyy"),
                     CenterCostCode = cc.Code,
                     ProductCode = pr.Code,
                     BaseUnit = cd.BaseUnit,
                     Amount = cd.Weight
 
                 };
-		    var report = query
+
+		    var dates = query
 		        .GroupBy(g => new
+		        {
+		            g.GeneratedDate
+		        })
+		        .Select(x => new DateList
+		        {
+		            Date = x.Key.GeneratedDate
+		        });
+
+		    var folioDates = SetFolio(dates.ToList(), folio);
+            var setFolioReport =
+                from q in query
+                join fd in folioDates on q.GeneratedDate equals fd.Date
+                select new ConsumptionReport
+                {
+                    Warehouse = q.Warehouse,
+                    Folio = fd.Folio,
+                    GeneratedDate = q.GeneratedDate,
+                    CenterCostCode = q.CenterCostCode,
+                    ProductCode = q.ProductCode,
+                    BaseUnit = q.BaseUnit,
+                    Amount = q.Amount
+
+                };
+
+            var report = setFolioReport
+                .GroupBy(g => new
 		        {
                     g.Warehouse,
                     g.Folio,
@@ -1171,7 +1213,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     BaseUnit = x.Key.BaseUnit,
 		            Amount = x.Sum(o => o.Amount)
 		        });
-			return report;
+		    
+			return report.ToList();
 		}
         
         public IList<WarehouseList> GetWarehouseListNames()

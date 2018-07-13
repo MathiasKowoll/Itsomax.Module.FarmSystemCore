@@ -7,10 +7,15 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
 {
     public class ProductCostCenterViewModel
     {
-        [Required] public long CostCenterId {get; set; }
-        [Required] public string Name { get; set; }
-        [Required] public DateTimeOffset CreatedOn { get; set; }
-        [Required] public bool Active { get; set; }
+        [Required] 
+        public long CostCenterId {get; set; }
+        [Required] 
+        public string Name { get; set; }
+        [Required] 
+        public DateTimeOffset CreatedOn { get; set; }
+        [Required] 
+        public bool Active { get; set; }
+        public int ProductOrder { get; set; }
         public IEnumerable<SelectListItem> Products { get; set; }
     }
 }

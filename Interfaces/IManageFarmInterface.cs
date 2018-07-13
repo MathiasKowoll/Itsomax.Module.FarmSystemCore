@@ -55,7 +55,7 @@ namespace Itsomax.Module.FarmSystemCore.Interfaces
         Task<SystemSucceededTask> SaveConsumptionEdit(long consumptionId, string[] products, string[] values,string username);
 		Task<bool> LoadInitialDataFarm();
         IList<WarehouseList> GetWarehouseListNames();
-        IEnumerable<ConsumptionReport> ConsumptionReport(DateTime reportDate, int folio,string warehouseName);
+        IList<ConsumptionReport> ConsumptionReport(DateTime reportDate, DateTime toReportDate, int folio,string warehouseName);
         IList<ConsumptionList> GetConsumptionList();
         Consumptions GetConsumptionById(long id);
     }

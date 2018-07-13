@@ -17,5 +17,6 @@ namespace Itsomax.Module.FarmSystemCore.Models
 		public DateTimeOffset CreatedOn { get; set; }
         public DateTimeOffset LateCreatedOn { get; set; }
         public IList<ConsumptionDetails> ConsumptionDetails { get; set; } = new List<ConsumptionDetails>();
+        public int? Folio { get; set; }
     }
 }

@@ -30,7 +30,8 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
 
     public class GenerateConsumptionReportViewModel
     {
-        public DateTime ConsumptionDate { get; set; }
+        public DateTime FromConsumptionDate { get; set; }
+        public DateTime ToConsumptionDate { get; set; }
         public int Folio { get; set; }
         public string WarehouseName { get; set; }
     }
