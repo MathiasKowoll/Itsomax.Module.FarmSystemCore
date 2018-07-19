@@ -1244,7 +1244,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 {
                     Id = c.Id,
                     CenterCost = cc.Name,
-                    ConsumptionEfectiveEntryDate = c.LateCreatedOn.ToLocalTime().ToString("yyyy/MM/dd HH:mm:ss"),
+                    ConsumptionEffectiveEntryDate = c.LateCreatedOn.ToLocalTime().ToString("yyyy/MM/dd HH:mm:ss"),
                     ConsumptionEntryDate = c.CreatedOn.ToLocalTime().ToString("yyyy/MM/dd HH:mm:ss "),
                     ConsumptionName = c.Name,
                     Warehouse = cd.WarehouseCode
@@ -1254,7 +1254,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 {
                     g.Id,
                     g.CenterCost,
-                    g.ConsumptionEfectiveEntryDate,
+                    g.ConsumptionEffectiveEntryDate,
                     g.ConsumptionEntryDate,
                     g.ConsumptionName,
                     g.Warehouse
@@ -1263,7 +1263,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 {
                     Id = x.Key.Id,
                     CenterCost = x.Key.CenterCost,
-                    ConsumptionEfectiveEntryDate = x.Key.ConsumptionEfectiveEntryDate,
+                    ConsumptionEffectiveEntryDate = x.Key.ConsumptionEffectiveEntryDate,
                     ConsumptionEntryDate = x.Key.ConsumptionEntryDate,
                     ConsumptionName = x.Key.ConsumptionName,
                     Warehouse = x.Key.Warehouse

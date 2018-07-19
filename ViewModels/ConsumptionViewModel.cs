@@ -46,7 +46,7 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public string ConsumptionName { get; set; }
         public string Warehouse { get; set; }
         public string CenterCost { get; set; }
-        public string ConsumptionEfectiveEntryDate { get; set; }
+        public string ConsumptionEffectiveEntryDate { get; set; }
         public string ConsumptionEntryDate { get; set; }
     }
 }
