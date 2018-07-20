@@ -9,12 +9,20 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public string Value { get; set; }
         public string BaseUnit { get; set; }
         public string CenterCostName { get; set; }
+        
     }
+
+    public class ProductListFailed
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
+    }
+
     public class ProductListEdit
     {
         public long CostCenterId { get; set; }
         public string Name { get;set; }
-        public decimal Value { get; set; }
+        public string Value { get; set; }
         public string BaseUnit { get; set; }
         public string CenterCostName { get; set; }
     }

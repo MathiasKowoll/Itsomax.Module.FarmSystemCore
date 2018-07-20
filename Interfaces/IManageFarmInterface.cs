@@ -50,8 +50,9 @@ namespace Itsomax.Module.FarmSystemCore.Interfaces
         IList<LocationList> GetCostCenterMedicallList();
         IEnumerable<ProductList> GetProductList(long costCenterId);
         IEnumerable<ProductListEdit> GetProductListEdit(long consumptionId);
+        IEnumerable<ProductList> GetProductListFailed(long costCenterId, string[] keys, string[] values);
+        IEnumerable<ProductListEdit> GetProductListEditFailed(long consumptionId, string[] keys, string[] values);
         Task<SystemSucceededTask> SaveConsumption(long costCenterId, string[] products, string[] values,string username,DateTimeOffset? lateCreatedOn);
-
         Task<SystemSucceededTask> SaveConsumptionEdit(long consumptionId, string[] products, string[] values,string username);
 		Task<bool> LoadInitialDataFarm();
         IList<WarehouseList> GetWarehouseListNames();
