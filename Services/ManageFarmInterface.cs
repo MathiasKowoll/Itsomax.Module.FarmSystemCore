@@ -989,7 +989,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return locationList;
         }
         
-        public IList<LocationList> GetCostCenterMedicallList()
+        public IList<LocationList> GetCostCenterMedicalList()
         {
             var locationList = new List<LocationList>();   
             var locList = (from a in GetActiveCostCenters()
