@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Itsomax.Module.FarmSystemCore.ViewModels
 {
@@ -22,6 +23,7 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
     {
         public long CostCenterId { get; set; }
         public string Name { get;set; }
+        [RegularExpression(@"\d+(\.\d{1,3})?", ErrorMessage = "Only three decimal support")]
         public string Value { get; set; }
         public string BaseUnit { get; set; }
         public string CenterCostName { get; set; }

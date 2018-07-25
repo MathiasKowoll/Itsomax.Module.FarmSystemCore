@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Collections.Generic;
 
 namespace Itsomax.Module.FarmSystemCore.ViewModels
 {
@@ -8,7 +9,7 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public ConsumptionReport()
         {
             WarehouseOut = "07";
-            Description = "CONSUMO SILAJE";
+            Description = "CONSUMO";
         }
         public string Warehouse { get; set; }
         public int Folio { get; set; }
@@ -19,7 +20,18 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public string ProductCode { get; set; }
         public string BaseUnit { get; set; }
         public decimal Amount { get; set; }
+        public long ConsumptionId { get; set; }
 
+    }
+
+    public class ReportPreview
+    {
+        public DateTimeOffset InitialDate { get; set; }
+        public DateTimeOffset FinalDate { get; set; }
+        public IList<ConsumptionReport> ReportTable { get; set; }
+        public string Warehouse { get; set; }
+        
+        
     }
 
     public class WarehouseList

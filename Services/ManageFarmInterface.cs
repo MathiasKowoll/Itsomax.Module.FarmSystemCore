@@ -855,6 +855,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
         {
             return _products.Query().FirstOrDefault(x => x.Code == code);
         }
+        
         public Products GetProductById(long id)
         {
             return _products.Query().FirstOrDefault(x => x.Id == id);
@@ -1008,8 +1009,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
             return locationList;
         }
-        
-        
+       
         public async Task<bool> LoadInitialDataFarm()
         {
             //FarmInitialData
@@ -1222,8 +1222,13 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     ProductCode = pr.Code,
                     BaseUnit = cd.BaseUnit,
                     Amount = cd.Weight
-
                 };
+
+		    if (!query.Any())
+		    {
+		        var nullReport = new List<ConsumptionReport>();
+		        return nullReport;
+		    }
 
 		    var dates = query
 		        .GroupBy(g => new
@@ -1248,7 +1253,6 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     ProductCode = q.ProductCode,
                     BaseUnit = q.BaseUnit,
                     Amount = q.Amount
-
                 };
 
             var report = setFolioReport
