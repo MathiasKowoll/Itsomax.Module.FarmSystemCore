@@ -36,6 +36,10 @@ namespace Itsomax.Module.FarmSystemCore.Data
             {
                 o.HasOne(x => x.Locations).WithMany(x => x.CostCenter).HasForeignKey(x => x.LocationId);
             });
+            modelBuilder.Entity<Consumptions>(o =>
+            {
+                o.HasOne(x => x.Folio).WithMany(x => x.Consumptions).HasForeignKey(x => x.FolioId);
+            });
         }
     }
 }

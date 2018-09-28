@@ -36,7 +36,6 @@ namespace Itsomax.Module.FarmSystemCore.Models
         public long LocationId { get; set; }
         public Locations Locations { get; set; }
         public IList<ConsumptionDetails> ConsumptionDetails { get; set; } = new List<ConsumptionDetails>();
-
 	    public IList<CostCenterProductsDetails> CostCenterProductsDetails { get; set; } =
 		    new List<CostCenterProductsDetails>();
     }

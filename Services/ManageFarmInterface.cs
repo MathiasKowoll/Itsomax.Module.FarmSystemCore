@@ -9,6 +9,7 @@ using Itsomax.Data.Infrastructure.Data;
 using Itsomax.Module.Core.Data;
 using Itsomax.Module.Core.Extensions;
 using Itsomax.Module.Core.Interfaces;
+using Itsomax.Module.Core.ViewModels;
 using Itsomax.Module.FarmSystemCore.Interfaces;
 using Itsomax.Module.FarmSystemCore.Models;
 using Itsomax.Module.FarmSystemCore.ViewModels;
@@ -32,12 +33,15 @@ namespace Itsomax.Module.FarmSystemCore.Services
         private readonly IRepository<ConsumptionDetails> _consumptionDetails;
         private readonly ILogginToDatabase _logger;
         private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IRepository<ProductTypes> _productTypes;
+        private readonly IRepository<Folio> _folio;
         
         public ManageFarmInterface(IRepository<Locations> location,ILogginToDatabase logger,
             IRepository<CostCenter> costCenter,
             IRepository<Products> products,ItsomaxDbContext context,IRepository<Consumptions> consumption,
             IRepository<CostCenterProducts> costCenterProduct,IRepository<BaseUnits> baseUnits,
-            IRepository<ConsumptionDetails> consumptionDetails, IHostingEnvironment hostingEnvironment)
+            IRepository<ConsumptionDetails> consumptionDetails, IHostingEnvironment hostingEnvironment,
+            IRepository<ProductTypes> productTypes, IRepository<Folio> folio)
         {
             _location = location;
             _logger = logger;
@@ -49,7 +53,11 @@ namespace Itsomax.Module.FarmSystemCore.Services
             _consumption = consumption;
             _consumptionDetails = consumptionDetails;
             _hostingEnvironment = hostingEnvironment;
+            _productTypes = productTypes;
+            _folio = folio;
         }
+        
+        
 
         public async Task<SystemSucceededTask> AddBaseUnit(BaseUnitViewModel model, string username)
         {
@@ -691,7 +699,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     select new { BaseUnitId = a.Id, BaseUnitName = a.Name,Selected = false }).ToList();
                 foreach (var item in locList)
                 {
-                    bool selected = item.BaseUnitId == product.BaseUnitId;
+                    var selected = item.BaseUnitId == product.BaseUnitId;
                     baseUnitLists.Add(new BaseUnitList
                     {
                         BaseUnitId = item.BaseUnitId,
@@ -702,6 +710,47 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 }
                 return baseUnitLists;
 
+            }
+        }
+
+        public IList<GenericSelectList> GetProductTypeList(long? productId)
+        {
+            if (productId == null)
+            {
+                var productTypeList = new List<GenericSelectList>();
+                var prodtList = _productTypes.GetAll();
+                
+                productTypeList.Add(new GenericSelectList
+                    {
+                        Id = 0,
+                        Name = "Select a Product Type",
+                        Selected = true
+                    });
+                productTypeList.AddRange(prodtList.Select(item => new GenericSelectList
+                {
+                    Id = item.Id, Name = item.Type, Selected = false
+                    
+                }));
+                return productTypeList;
+            }
+            else
+            {
+                var product = GetProductById(productId.Value);
+                var productTypeList = new List<GenericSelectList>();
+                var prodtList = _productTypes.GetAll();
+                foreach (var item in prodtList)
+                {
+                    var Selected = item.Id == product.ProductTypeId;
+                    productTypeList.Add(new GenericSelectList
+                    {
+                        Id = item.Id,
+                        Name = item.Type,
+                        Selected = Selected
+                    });
+                    
+                }
+
+                return productTypeList;
             }
         }
 
@@ -720,7 +769,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 BaseUnitId = model.BaseUnitId,
                 Code = model.Code,
                 Description = model.Description,
-                Name = model.Name
+                Name = model.Name,
+                ProductTypeId = model.ProductTypeId
             };
             _products.Add(product);
             try
@@ -753,6 +803,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             products.CreatedOn = products.CreatedOn;
             products.Name = model.Name;
             products.Description = model.Description;
+            products.ProductTypeId = model.ProductTypeId;
             try
             {
                 await _products.SaveChangesAsync();
@@ -861,14 +912,15 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return _products.Query().FirstOrDefault(x => x.Id == id);
         }
 
-        public IEnumerable<ProductList> GetProductList(long costCenterId)
+        public IEnumerable<ProductList> GetProductList(long costCenterId,string productType)
         {
             var list = from cc in _costCenter.Query()
                 join pd in _context.Set<CostCenterProductsDetails>() on cc.Id equals pd.CostCenterId
                 join pr in _products.Query() on pd.ProductId equals pr.Id
                 join cname in _costCenterProduct.Query() on pd.CostCenterProductsId equals cname.Id
                 join bu in _baseUnits.Query() on pr.BaseUnitId equals bu.Id
-                where cc.Id == costCenterId && cc.Active == true && pr.Active == true
+                join pt in _productTypes.Query() on pr.ProductTypeId equals pt.Id 
+                where cc.Id == costCenterId && cc.Active == true && pr.Active == true && pt.Type == productType
                 select new ProductList
                 {
                     Name = pr.Name,
@@ -885,6 +937,27 @@ namespace Itsomax.Module.FarmSystemCore.Services
             var list = from cd in _consumptionDetails.Query().Where(x => x.ConsumptionId == consumptionId)
                 join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
                 join p in _products.Query() on cd.ProductId equals p.Id
+                join c in _consumption.Query() on cd.ConsumptionId equals c.Id
+                where c.FolioId == null
+                       select new ProductListEdit
+                {
+                    CostCenterId = cc.Id,
+                    CenterCostName = cc.Name,
+                    Name = p.Name,
+                    Value = cd.Weight.ToString(CultureInfo.CurrentCulture),
+                    BaseUnit = cd.BaseUnit
+
+                };
+            return list.ToList();
+        }
+
+        public IEnumerable<ProductListEdit> GetProductListFolio(long consumptionId,long folio)
+        {
+            var list = from cd in _consumptionDetails.Query().Where(x => x.ConsumptionId == consumptionId)
+                join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
+                join p in _products.Query() on cd.ProductId equals p.Id
+                join c in _consumption.Query() on cd.ConsumptionId equals c.Id
+                where c.FolioId == folio
                 select new ProductListEdit
                 {
                     CostCenterId = cc.Id,
@@ -897,7 +970,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             return list.ToList();
         }
 
-        public IEnumerable<ProductList> GetProductListFailed(long costCenterId, string[] keys, string[] values)
+        public IEnumerable<ProductList> GetProductListFailed(long costCenterId,string productType, string[] keys, string[] values)
         {
             var count = keys.Length;
             var productList= new List<ProductListFailed>();
@@ -913,8 +986,9 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 join cname in _costCenterProduct.Query() on pd.CostCenterProductsId equals cname.Id
                 join bu in _baseUnits.Query() on pr.BaseUnitId equals bu.Id
                 join pl in productList on pr.Name equals pl.Name
-                where cc.Id == costCenterId && cc.Active == true && pr.Active == true
-                select new ProductList
+                join pt in _productTypes.Query() on pr.ProductTypeId equals pt.Id
+                where cc.Id == costCenterId && cc.Active == true && pr.Active == true && pt.Type == productType
+                       select new ProductList
                 {
                     Name = pr.Name,
                     BaseUnit = bu.Value,
@@ -939,6 +1013,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
                 join p in _products.Query() on cd.ProductId equals p.Id
                 join pl in productList on p.Name equals pl.Name
+                join c in _consumption.Query() on cd.ConsumptionId equals c.Id
+                where c.FolioId == null
                        select new ProductListEdit
                 {
                     CostCenterId = cc.Id,
@@ -1189,7 +1265,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
             }
 
         }
-
+        /*
         private IList<DateFolio> SetFolio(IList<DateList> dateList,int folio)
         {
             var dateFolio = new List<DateFolio>();
@@ -1201,8 +1277,9 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
             return dateFolio;
         }
+        */
 
-		public IList<ConsumptionReport> ConsumptionReport(DateTime fromReportDate,DateTime toReportDate,int folio,string warehouseName )
+		public IList<ConsumptionReport> ConsumptionReport(DateTime fromReportDate,DateTime toReportDate,string warehouseName,bool? setFolio,long folio = -1 )
 		{
             var query =
 		        from cd in _consumptionDetails.Query()
@@ -1212,6 +1289,7 @@ namespace Itsomax.Module.FarmSystemCore.Services
                 where Int32.Parse(cp.LateCreatedOn.ToString("yyyyMMdd")) >= Int32.Parse(fromReportDate.ToString("yyyyMMdd"))
                       && Int32.Parse(cp.LateCreatedOn.ToString("yyyyMMdd")) <= Int32.Parse(toReportDate.ToString("yyyyMMdd"))
                       && cc.WarehouseCode == warehouseName
+                      && cp.FolioId == null
                 orderby cp.LateCreatedOn.ToString("yyyyMMdd")
                 select new ConsumptionReport
                 {
@@ -1221,39 +1299,37 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     CenterCostCode = cc.Code,
                     ProductCode = pr.Code,
                     BaseUnit = cd.BaseUnit,
-                    Amount = cd.Weight
+                    Amount = cd.Weight,
+                    ConsumptionId = cp.Id
+                    
                 };
 
-		    if (!query.Any())
+
+		    if (!query.Any() && folio ==-1)
 		    {
 		        var nullReport = new List<ConsumptionReport>();
 		        return nullReport;
 		    }
 
-		    var dates = query
-		        .GroupBy(g => new
-		        {
-		            g.GeneratedDate
-		        })
-		        .Select(x => new DateList
-		        {
-		            Date = x.Key.GeneratedDate
-		        });
-
-		    var folioDates = SetFolio(dates.ToList(), folio);
+		    //var folioDates = SetFolio(dates.ToList(), folio);
             var setFolioReport =
                 from q in query
-                join fd in folioDates on q.GeneratedDate equals fd.Date
+                //join fd in folioDates on q.GeneratedDate equals fd.Date
                 select new ConsumptionReport
                 {
                     Warehouse = q.Warehouse,
-                    Folio = fd.Folio,
+                    Folio = 0,
                     GeneratedDate = q.GeneratedDate,
                     CenterCostCode = q.CenterCostCode,
                     ProductCode = q.ProductCode,
                     BaseUnit = q.BaseUnit,
-                    Amount = q.Amount
+                    Amount = q.Amount,
+                    ConsumptionId = q.ConsumptionId
                 };
+
+		    var setFolioReportCount = setFolioReport.Count();
+            //TODO:Save Into Consumption Folio Table
+            //var res = CreateConsumptionFolio(setFolioReport.ToList(),fromReportDate,toReportDate).Result;
 
             var report = setFolioReport
                 .GroupBy(g => new
@@ -1265,7 +1341,8 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     g.Description,
                     g.CenterCostCode,
                     g.ProductCode,
-                    g.BaseUnit
+                    g.BaseUnit,
+                    //g.ConsumptionId
 
 		        })
 		        .Select(x => new ConsumptionReport
@@ -1278,11 +1355,147 @@ namespace Itsomax.Module.FarmSystemCore.Services
                     CenterCostCode = x.Key.CenterCostCode,
                     ProductCode = x.Key.ProductCode,
                     BaseUnit = x.Key.BaseUnit,
-		            Amount = x.Sum(o => o.Amount)
+		            Amount = x.Sum(o => o.Amount),
+                    //ConsumptionId = x.Key.ConsumptionId
 		        });
+
+
+            
+            if (setFolioReport.Any() && setFolio == true)
+            {
+                folio = SaveFolio(fromReportDate, toReportDate, setFolioReport.ToList());
+            }
+
+		    if (folio != -1)
+		    {
+		        var final =
+		            from cd in _consumptionDetails.Query()
+		            join pr in _products.Query() on cd.ProductId equals pr.Id
+		            join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
+		            join cp in _consumption.Query().Where(x => x.FolioId == folio) on cd.ConsumptionId equals cp.Id
+		            orderby cp.LateCreatedOn.ToString("yyyyMMdd")
+		            select new ConsumptionReport
+		            {
+		                Warehouse = cd.WarehouseCode,
+		                Folio = 0,
+		                GeneratedDate = cp.LateCreatedOn.ToString("dd/MM/yyyy"), //toReportDate.ToString("dd/MM/yyyy"),
+		                CenterCostCode = cc.Code,
+		                ProductCode = pr.Code,
+		                BaseUnit = cd.BaseUnit,
+		                Amount = cd.Weight,
+		                ConsumptionId = cp.Id
+
+		            };
+		        var report2 = final
+                    .GroupBy(g => new
+		            {
+		                g.Warehouse,
+		                g.Folio,
+		                g.GeneratedDate,
+		                g.WarehouseOut,
+		                g.Description,
+		                g.CenterCostCode,
+		                g.ProductCode,
+		                g.BaseUnit,
+		                //g.ConsumptionId
+
+		            })
+		            .Select(x => new ConsumptionReport
+		            {
+		                Warehouse = x.Key.Warehouse,
+		                Folio = x.Key.Folio,
+		                GeneratedDate = x.Key.GeneratedDate,
+		                WarehouseOut = x.Key.WarehouseOut,
+		                Description = x.Key.Description,
+		                CenterCostCode = x.Key.CenterCostCode,
+		                ProductCode = x.Key.ProductCode,
+		                BaseUnit = x.Key.BaseUnit,
+		                Amount = x.Sum(o => o.Amount),
+		                //ConsumptionId = x.Key.ConsumptionId
+		            });
+		        return report2.ToList();
+		    }
+            return report.ToList();
 		    
-			return report.ToList();
-		}
+        }
+
+        private long SaveFolio(DateTime fromReportDate, DateTime toReportDate, IList<ConsumptionReport> report)
+        {
+            var folio = new Folio
+            {
+                FinalDate = toReportDate,
+                InitialDate = fromReportDate,
+                IsPreviewFolio = false
+            };
+            _folio.Add(folio);
+            _folio.SaveChanges();
+
+            var consumptions = report.Select(x => x.ConsumptionId).Distinct().ToList();
+
+            foreach (var item in consumptions)
+            {
+                var consumption = _consumption.Query().FirstOrDefault(x => x.Id == item);
+                consumption.FolioId = folio.Id;
+                _consumption.SaveChanges();
+            }
+
+            return folio.Id;
+        }
+
+
+        public IList<ConsumptionReport> GeConsumptionReportById(long folio)
+        {
+            var final =
+                    from cd in _consumptionDetails.Query()
+                    join pr in _products.Query() on cd.ProductId equals pr.Id
+                    join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
+                    join cp in _consumption.Query() on cd.ConsumptionId equals cp.Id
+                    join f in _folio.Query() on cp.FolioId equals f.Id
+                    where cp.FolioId == folio
+                    orderby cp.LateCreatedOn.ToString("yyyyMMdd")
+                    select new ConsumptionReport
+                    {
+                        Warehouse = cd.WarehouseCode,
+                        Folio = 0,
+                        GeneratedDate = cp.LateCreatedOn.ToString("dd/MM/yyyy"), //toReportDate.ToString("dd/MM/yyyy"),
+                        CenterCostCode = cc.Code,
+                        ProductCode = pr.Code,
+                        BaseUnit = cd.BaseUnit,
+                        Amount = cd.Weight,
+                        ConsumptionId = cp.Id
+
+                    };
+            var report2 = final
+                .GroupBy(g => new
+                {
+                    g.Warehouse,
+                    g.Folio,
+                    g.GeneratedDate,
+                    g.WarehouseOut,
+                    g.Description,
+                    g.CenterCostCode,
+                    g.ProductCode,
+                    g.BaseUnit,
+                        //g.ConsumptionId
+
+                    })
+                .Select(x => new ConsumptionReport
+                {
+                    Warehouse = x.Key.Warehouse,
+                    Folio = x.Key.Folio,
+                    GeneratedDate = x.Key.GeneratedDate,
+                    WarehouseOut = x.Key.WarehouseOut,
+                    Description = x.Key.Description,
+                    CenterCostCode = x.Key.CenterCostCode,
+                    ProductCode = x.Key.ProductCode,
+                    BaseUnit = x.Key.BaseUnit,
+                    Amount = x.Sum(o => o.Amount),
+                        //ConsumptionId = x.Key.ConsumptionId
+                    });
+            return report2.ToList();
+        }
+
+       
         
         public IList<WarehouseList> GetWarehouseListNames()
         {
@@ -1300,13 +1513,59 @@ namespace Itsomax.Module.FarmSystemCore.Services
 
         }
 
+        public IList<Folio> GetFolio()
+        {
+            return _folio.Query().ToList();
+        }
+
+        public IList<ConsumptionList> GetConsumptionListByFolio(long folio)
+        {
+            var date = DateTimeOffset.Now;
+
+            var query = from c in _consumption.Query().Where(x => x.CreatedOn >= date.AddDays(-10000))
+                join cd in _consumptionDetails.Query() on c.Id equals cd.ConsumptionId
+                join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
+                where c.FolioId == folio
+                select new ConsumptionList
+                {
+                    Id = c.Id,
+                    CenterCost = cc.Name,
+                    ConsumptionEffectiveEntryDate = c.LateCreatedOn.ToLocalTime().ToString("yyyy/MM/dd HH:mm:ss"),
+                    ConsumptionEntryDate = c.CreatedOn.ToLocalTime().ToString("yyyy/MM/dd HH:mm:ss "),
+                    ConsumptionName = c.Name,
+                    Warehouse = cd.WarehouseCode
+                };
+            var list = query
+                .GroupBy(g => new
+                {
+                    g.Id,
+                    g.CenterCost,
+                    g.ConsumptionEffectiveEntryDate,
+                    g.ConsumptionEntryDate,
+                    g.ConsumptionName,
+                    g.Warehouse
+                })
+                .Select(x => new ConsumptionList
+                {
+                    Id = x.Key.Id,
+                    CenterCost = x.Key.CenterCost,
+                    ConsumptionEffectiveEntryDate = x.Key.ConsumptionEffectiveEntryDate,
+                    ConsumptionEntryDate = x.Key.ConsumptionEntryDate,
+                    ConsumptionName = x.Key.ConsumptionName,
+                    Warehouse = x.Key.Warehouse
+                }).ToList();
+
+            return list;
+        }
+
         public IList<ConsumptionList> GetConsumptionList()
         {
             var date = DateTimeOffset.Now;   
                 
-            var query = from c in _consumption.Query().Where(x => x.CreatedOn >= date.AddDays(-1))
+            var query = from c in _consumption.Query().Where(x => x.CreatedOn >= date.AddDays(-10000))
                 join cd in _consumptionDetails.Query() on c.Id equals cd.ConsumptionId
                 join cc in _costCenter.Query() on cd.CostCenterId equals cc.Id
+                where c.FolioId == null
                 select new ConsumptionList
                 {
                     Id = c.Id,

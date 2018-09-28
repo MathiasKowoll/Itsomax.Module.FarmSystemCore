@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Itsomax.Module.Core.Extensions;
+using Itsomax.Module.Core.ViewModels;
 using Itsomax.Module.FarmSystemCore.Models;
 using Itsomax.Module.FarmSystemCore.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -48,16 +49,22 @@ namespace Itsomax.Module.FarmSystemCore.Interfaces
         IList<LocationList> GetCostCenterList();
         IList<LocationList> GetCostCenterMealList();
         IList<LocationList> GetCostCenterMedicalList();
-        IEnumerable<ProductList> GetProductList(long costCenterId);
+        IEnumerable<ProductList> GetProductList(long costCenterId,string productType);
         IEnumerable<ProductListEdit> GetProductListEdit(long consumptionId);
-        IEnumerable<ProductList> GetProductListFailed(long costCenterId, string[] keys, string[] values);
+        IEnumerable<ProductList> GetProductListFailed(long costCenterId,string productType, string[] keys, string[] values);
         IEnumerable<ProductListEdit> GetProductListEditFailed(long consumptionId, string[] keys, string[] values);
         Task<SystemSucceededTask> SaveConsumption(long costCenterId, string[] products, string[] values,string username,DateTimeOffset? lateCreatedOn);
         Task<SystemSucceededTask> SaveConsumptionEdit(long consumptionId, string[] products, string[] values,string username);
 		Task<bool> LoadInitialDataFarm();
         IList<WarehouseList> GetWarehouseListNames();
-        IList<ConsumptionReport> ConsumptionReport(DateTime reportDate, DateTime toReportDate, int folio,string warehouseName);
+        IList<ConsumptionReport> ConsumptionReport(DateTime reportDate, DateTime toReportDate,string warehouseName, bool? setFolio, long folio = -1);
         IList<ConsumptionList> GetConsumptionList();
         Consumptions GetConsumptionById(long id);
+        IList<GenericSelectList> GetProductTypeList(long? productId);
+        IList<ConsumptionReport> GeConsumptionReportById(long folio);
+        IList<Folio> GetFolio();
+        IList<ConsumptionList> GetConsumptionListByFolio(long folio);
+        IEnumerable<ProductListEdit> GetProductListFolio(long consumptionId, long folio);
+
     }
 }

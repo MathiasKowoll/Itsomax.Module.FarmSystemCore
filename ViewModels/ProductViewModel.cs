@@ -16,6 +16,8 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public bool Active { get; set; }
         [Required]
         public long BaseUnitId { get; set; }
+        [Required]
+        public long? ProductTypeId { get; set; }
     }
 
     public class BaseUnitList
@@ -42,5 +44,7 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
         public bool Active { get; set; }
         [Required]
         public long BaseUnitId { get; set; }
+        [Required]
+        public long? ProductTypeId { get; set; }
     }
 }

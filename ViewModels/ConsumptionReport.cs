@@ -24,15 +24,27 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
 
     }
 
+    public class FolioConsumption
+    {
+        public long Folio { get; set; }
+        public long ConsumptionId { get; set; }
+    }
+
     public class ReportPreview
     {
-        public DateTimeOffset InitialDate { get; set; }
-        public DateTimeOffset FinalDate { get; set; }
+        public ReportPreview()
+        {
+            GenerateReport = false;
+        }
+        public DateTime FromConsumptionDate { get; set; }
+        public DateTime ToConsumptionDate { get; set; }
         public IList<ConsumptionReport> ReportTable { get; set; }
-        public string Warehouse { get; set; }
-        
-        
+        public string WarehouseName { get; set; }
+        public bool GenerateReport { get; set; }
+
+
     }
+
 
     public class WarehouseList
     {
@@ -44,7 +56,7 @@ namespace Itsomax.Module.FarmSystemCore.ViewModels
     {
         public DateTime FromConsumptionDate { get; set; }
         public DateTime ToConsumptionDate { get; set; }
-        public int Folio { get; set; }
+        //public int Folio { get; set; }
         public string WarehouseName { get; set; }
     }
 }
